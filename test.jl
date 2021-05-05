@@ -3,73 +3,6 @@ module Tst
 using Speckles
 using Plots
 
-
-function fieldInstance!(efieldp::eFieldParams,n::Integer,bs::Beamsplitter,df::DataFrame;update::String = "cat")
-    eInstance = eFieldInstance(n,efieldp)
-    efieldt = map(t->electricField(t,eInstance),df.time)
-    efieldtBeam = bs.t * efieldt
-    inty = intensity.(efieldtBeam)
-    if update == "sum"
-        df[!,"intensity"] = inty
-        if "sum" in names(df)
-            df[!,"sum"] += inty
-        else
-            df[!,"sum"] = inty
-        end
-    else
-        iname = string("intensity",size(df)[2])
-        df[!,iname] = inty
-    end
-    return df
-end
-
-
-function corrInstance!(idf::DataFrame,cdf::DataFrame;update::String = "cat")
-    iname = string("g2tau",size(cdf)[2])
-    intensityBeam = idf[!,end]
-    window = size(cdf)[1]
-    g2τNorm = mean(intensityBeam)^2
-    g2τInst = map(0:window-1) do i
-        autocorrelate(intensityBeam,i,window)/g2τNorm
-    end
-    if update == "sum"
-        if "sum" in names(cdf)
-            cdf[!,"sum"] += g2τInst
-        else
-            cdf[!,"sum"] = g2τInst
-        end
-        cdf[!,"g2tau"] = g2τInst
-    else
-        iname = string("g2tau",size(cdf)[2])
-        cdf[!,iname] = g2τInst
-    end
-    return cdf
-end
-
-
-function ftInstance!(cdf::DataFrame,ftdf::DataFrame,cuts::Tuple{T,T};update::String = "cat") where {T<:Integer}
-    fft = meanFFT(cdf[!,end],cuts)
-    if update == "sum"
-        if "sum" in names(ftdf)
-            ftdf[!,"sum"] += fft
-        else
-            ftdf[!,"sum"] = fft
-        end
-        ftdf[!,"PowerSpec"] = fft
-    else
-        iname = string("PowerSpec",size(ftdf)[2])
-        ftdf[!,iname] = fft
-    end
-    return ftdf
-end
-
-function classicalInstance!(efieldp::eFieldParams,n::Integer,bs::Beamsplitter,cuts::Tuple{T,T},idf::DataFrame,cdf::DataFrame,ftdf::DataFrame;update::String = "cat") where {T<:Integer}
-    fieldInstance!(efieldp,n,bs,idf,update = update)
-    corrInstance!(idf,cdf,update=update)
-    ftInstance!(cdf,ftdf,cuts,update=update)
-    return idf,cdf,ftdf
-end
-
 function run()
 
     ############################################################################ 
@@ -78,16 +11,16 @@ function run()
     makeInstances = true
 
     tres = 0.01 # 10 picoseconds
-    tmax = 10.0 # in nanoseconds
+    tmax = 20.0 # in nanoseconds
     
     # set simulation seed (-1 for arbitrary seed)
     seed = -1
 
     # set the number of emitting atoms
-    bigN = 50
+    bigN = 100
 
     # Balmer-α lines specified here
-    ωM = [456811.0, 456812.0]
+    ωM = [456811.0, 456815.0]
     shift = ωM[2]-ωM[1]
     ωM = 2*π*ωM
     
@@ -121,6 +54,9 @@ function run()
     # generate times in tres ps intervals up to 2*tmax
     times = collect(0:tres:2*tmax);
 
+    # have enough trials to get the desired number of photon counts
+    trials = convert(Integer,ceil(ntot/nbar))
+
     # dataframe for intensity
     dfIntensity = DataFrame(:time=>times)
 
@@ -140,83 +76,47 @@ function run()
     # dataframe for fourier transform results
     dfFreqs = DataFrame(:freq=>allfreqs)
 
+    # array to accumulate all photon counts
+	totCounts = zeros(Integer,length(times))
+
     # concatenation of all photon correlation times
     allCorrTimes = Vector{Float64}[]
 
-
+    ud = "sum"
     # make first instance of classical calculations   
-    classicalInstance!(eParams,bigN,bs,(τstart,τend),dfIntensity,dfCorr,dfFreqs,update = "sum")
+    classicalInstance!(eParams,bigN,bs,(τstart,τend),dfIntensity,dfCorr,dfFreqs,update = ud)
 
-	# for n = 1:trials
+    for n = 1:trials
 
+        # calculate the average photon counts in each time bin from the beam intensity and the overall average photon count rate
+        γavgBeam = γIntensity(dfIntensity[!,end],nbar/2)
 
-		# # calculate the average photon counts in each time bin from the beam intensity and the overall average photon count rate
-		# γavg1Beam = γIntensity(intensity1Beam,nbar/2)
+        # generate counts for each beam
+        γcountsBeam1 = poissonCount.(γavgBeam)
+        γcountsBeam2 = poissonCount.(γavgBeam)
 
-		# # generate counts for each beam
-		# γcounts1Beam1 = poissonCount.(γavg1Beam)
-		# γcounts1Beam2 = poissonCount.(γavg1Beam)
+        # concatenate the correlations from this run into all others
+        allCorrTimes = vcat(allCorrTimes,corrTimes(τ,γcountsBeam1,γcountsBeam2))
 
-		# # concatenate the correlations from this run into all others
-		# allCorrTimes = vcat(allCorrTimes,corrTimes(τ,γcounts1Beam1,γcounts1Beam2))
+        # add counts from both beams
+        totCounts .+= γcountsBeam1
+        totCounts .+= γcountsBeam2
 
-		# # add counts from both beams
-		# totCounts .+= γcounts1Beam1
-		# totCounts .+= γcounts1Beam2
+        # reinstantiate if desired
+        if makeInstances && n != trials
+            classicalInstance!(eParams,bigN,bs,(τstart,τend),dfIntensity,dfCorr,dfFreqs,update = ud)
+        end
+    end
+    
 
-		# # reinstantiate if desired
-		# if makeInstances && n != trials
-			# # reinstantiate electric field
-			# eInstance1 = eFieldInstance(bigN,eParams)
+    ftSum, ftFreqs = fftPositiveFreq(dfFreqs.sum,dfFreqs.freq)
+    sumplot = plot(ftFreqs,abs.(ftSum))
+    savefig(sumplot,"sumplot.svg")
 
-			# # calculate electric field vs time
-			# eFieldT1 = map(t->electricField(t,eInstance1),times)
-
-			# # apply beam splitter
-			# eFieldT1Beam = bs.t * eFieldT1
-
-			# # calculate intensity
-			# intensity1Beam = intensity.(eFieldT1Beam)
-
-			# # calculate classical g2τ
-			# g2τ1Norm = mean(intensity1Beam)^2
-			# g2τ1 = map(i->autocorrelate(intensity1Beam,i,window),collect(0:window-1))/g2τ1Norm
-
-			# # calculate Fourier transform of this instance
-			# g2τ1FFT = meanFFT(g2τ1,(τstart,τend))
-
-			# # accumulate Fourier transform sum
-			# g2τ1FFTsum .+= g2τ1FFT
-		# end
-	# end
-	# # end
-
-	# g2τ1FFTsinglePos,allfreqsPos = fftPositiveFreq(g2τ1FFT,allfreqs)
-
-    # # bin correlation times into a histogram
-	# corrHist = fit(Histogram,allCorrTimes,vcat(τ,τ[end]+tres),closed=:left)
-
-	# # normalize the histogram
-	# normCorr = corrHist.weights/sum(corrHist.weights)
-
-	# # subtract mean from histogram to reduce constant term
-	# normAvgCorr = normCorr .- mean(normCorr)
-
-	# # take the fourier transform
-	# γfft = fft(normAvgCorr)
-
-	# # recover fourier transform frequencies
-	# γfreqs = fftfreq(length(γfft),1/tres)
-
-	# # select positive frequencies for plotting
-	# γfftPos,γfreqsPos = fftPositiveFreq(γfft,γfreqs)
-
-
-    # γCorrFreqPlot = plot(γfreqsPos,abs.(γfftPos),label = false)
-	# xlabel!(γCorrFreqPlot,"frequency (GHz)")
-	# title!(γCorrFreqPlot,"Fourier transform of photon correlations")
-	# vline!(γCorrFreqPlot,[shift],label="Frequency shift",ls=:dash)
-
+    single = dfFreqs.PowerSpec
+    ftSingle, ftFreqs = fftPositiveFreq(single,dfFreqs.freq)
+    singleplot = plot(ftFreqs,abs.(ftSingle))
+    savefig(singleplot,"singleplot.svg")
 
 end
 

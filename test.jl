@@ -1,74 +1,6 @@
 module Tst
 
 using Speckles
-using Plots
-
-
-function fieldInstance!(efieldp::eFieldParams,n::Integer,bs::Beamsplitter,df::DataFrame;update::String = "cat")
-    eInstance = eFieldInstance(n,efieldp)
-    efieldt = map(t->electricField(t,eInstance),df.time)
-    efieldtBeam = bs.t * efieldt
-    inty = intensity.(efieldtBeam)
-    if update == "sum"
-        df[!,"intensity"] = inty
-        if "sum" in names(df)
-            df[!,"sum"] += inty
-        else
-            df[!,"sum"] = inty
-        end
-    else
-        iname = string("intensity",size(df)[2])
-        df[!,iname] = inty
-    end
-    return df
-end
-
-
-function corrInstance!(idf::DataFrame,cdf::DataFrame;update::String = "cat")
-    iname = string("g2tau",size(cdf)[2])
-    intensityBeam = idf[!,end]
-    window = size(cdf)[1]
-    g2τNorm = mean(intensityBeam)^2
-    g2τInst = map(0:window-1) do i
-        autocorrelate(intensityBeam,i,window)/g2τNorm
-    end
-    if update == "sum"
-        if "sum" in names(cdf)
-            cdf[!,"sum"] += g2τInst
-        else
-            cdf[!,"sum"] = g2τInst
-        end
-        cdf[!,"g2tau"] = g2τInst
-    else
-        iname = string("g2tau",size(cdf)[2])
-        cdf[!,iname] = g2τInst
-    end
-    return cdf
-end
-
-
-function ftInstance!(cdf::DataFrame,ftdf::DataFrame,cuts::Tuple{T,T};update::String = "cat") where {T<:Integer}
-    fft = meanFFT(cdf[!,end],cuts)
-    if update == "sum"
-        if "sum" in names(ftdf)
-            ftdf[!,"sum"] += fft
-        else
-            ftdf[!,"sum"] = fft
-        end
-        ftdf[!,"PowerSpec"] = fft
-    else
-        iname = string("PowerSpec",size(ftdf)[2])
-        ftdf[!,iname] = fft
-    end
-    return ftdf
-end
-
-function classicalInstance!(efieldp::eFieldParams,n::Integer,bs::Beamsplitter,cuts::Tuple{T,T},idf::DataFrame,cdf::DataFrame,ftdf::DataFrame;update::String = "cat") where {T<:Integer}
-    fieldInstance!(efieldp,n,bs,idf,update = update)
-    corrInstance!(idf,cdf,update=update)
-    ftInstance!(cdf,ftdf,cuts,update=update)
-    return idf,cdf,ftdf
-end
 
 function run()
 
@@ -77,30 +9,46 @@ function run()
     ############################################################################ 
     makeInstances = true
 
-    tres = 0.01 # 10 picoseconds
-    tmax = 10.0 # in nanoseconds
+    # tres = 0.01 # 10 picoseconds
+    # tmax = 20.0 # in nanoseconds
     
-    # set simulation seed (-1 for arbitrary seed)
-    seed = -1
+    # # set simulation seed (-1 for arbitrary seed)
+    # seed = -1
 
-    # set the number of emitting atoms
-    bigN = 50
+    # # set the number of emitting atoms
+    # bigN = 100
 
-    # Balmer-α lines specified here
-    ωM = [456811.0, 456812.0]
-    shift = ωM[2]-ωM[1]
-    ωM = 2*π*ωM
+    # # Balmer-α lines specified here
+    # ωM = [456811.0, 456815.0]
+    # shift = ωM[2]-ωM[1]
+    # ωM = 2*π*ωM
     
-    # magnitude of each line
-    mag = convert(Vector{ComplexF64},ones(length(ωM)))
+    # # magnitude of each line
+    # mag = convert(Vector{ComplexF64},ones(length(ωM)))
 
-    # Doppler broadening
-    temp = 1000.0 # Kelvins
-    σDopp = σTemp(ωM[1],temp)
+    # # Doppler broadening
+    # temp = 1000.0 # Kelvins
+    # σDopp = σTemp(ωM[1],temp)
 
-    # photon counts
-    nbar = 10
-    ntot = 1000
+    # # photon counts
+    # nbar = 10
+    # ntot = 1000
+
+    paramDict = Dict(
+                     :tres=>[0.01], # in nanoseconds
+                     :tmax=>[10.0,100.0,1000.0], # nanoseconds
+                     :bigN=>[10,50,100,500], # number of atoms
+                     :mag=>[convert(Vector{ComplexF64},ones(3))], # field magnitude
+                     :νM=>[[456811.0,456813.0,456815.0]], # line frequencies
+                     :temp=>[5000], # Kelvins
+                     :nbar=>[10,50,100,500], # average photon counts in measurement period
+                     :ntot=>[10000], # approximate total photon counts
+                     :reset=>[1.0], # detector reset time in nanoseconds
+                     :seed=>[-1] # set seed for reproducible results
+                    )
+
+    # split paramDict into iterable vector of dictionaries
+    iterParams = paramVector(paramDict)
 
     # define beamsplitter
     bs = Beamsplitter(0.5,0.5)
@@ -110,113 +58,132 @@ function run()
     # high cut on τ (indices from end)
     τend = 0
 
-    ############################################################################ 
-    # Set up simulation
-    ############################################################################ 
+    # set array storage mode
+    ud = "sum"
 
-    # Store parameters
-    eParams = eFieldParams(mag,ωM,σDopp)
-    seed!(eParams,seed)
+    println("Beginning $(length(iterParams)) simulation runs")
+    for (i,params) in enumerate(iterParams)
+        ############################################################################ 
+        # Set up simulation
+        ############################################################################ 
+        println("----- Starting run $i -----")
 
-    # generate times in tres ps intervals up to 2*tmax
-    times = collect(0:tres:2*tmax);
+        ωM = 2*π*params[:νM]
+        # Calculate thermal Doppler broadening
+        σDopp = σTemp(ωM[1],params[:temp])
+        # Store parameters
+        eParams = eFieldParams(params[:mag],ωM,σDopp)
+        seed!(eParams,params[:seed])
 
-    # dataframe for intensity
-    dfIntensity = DataFrame(:time=>times)
+        # generate times in tres ps intervals up to 2*tmax
+        times = collect(0:params[:tres]:2*params[:tmax]);
 
-    # limit the window to tmax to avoid correlation cutoff
-    window = convert(Integer,floor(length(times)/2));
+        # have enough trials to get the desired number of photon counts
+        instances = convert(Integer,ceil(params[:ntot]/params[:nbar]))
 
-    # τ is just the times up to our window
-    τ = times[1:window];
-    # dataframe for tau dependent values
-    dfCorr = DataFrame(:tau=>τ)
+        # dataframe for intensity
+        dfIntensity = DataFrame(:time=>times)
 
-    # g2τCalc = map(tau->g2Calc(tau,bigN,eParams),τ)
+        # limit the window to tmax to avoid correlation cutoff
+        window = convert(Integer,floor(length(times)/2));
 
-    # generate frequency bins of fourier transform
-    allfreqs = fftFreq(tres,τ,(τstart,τend))
-    
-    # dataframe for fourier transform results
-    dfFreqs = DataFrame(:freq=>allfreqs)
+        # τ is just the times up to our window
+        τ = times[1:window];
+        # dataframe for tau dependent values
+        dfCorr = DataFrame(:tau=>τ)
 
-    # concatenation of all photon correlation times
-    allCorrTimes = Vector{Float64}[]
+        # g2τCalc = map(tau->g2Calc(tau,bigN,eParams),τ)
 
+        # generate frequency bins of fourier transform
+        allfreqs = fftFreq(params[:tres],τ,(τstart,τend))
+        
+        # dataframe for fourier transform results
+        dfFreqs = DataFrame(:freq=>allfreqs)
 
-    # make first instance of classical calculations   
-    classicalInstance!(eParams,bigN,bs,(τstart,τend),dfIntensity,dfCorr,dfFreqs,update = "sum")
+        # array to accumulate all photon counts
+        totCounts = zeros(Integer,length(times))
 
-	# for n = 1:trials
+        # concatenation of all photon correlation times
+        allCorrTimes = Vector{Float64}[]
 
+        # make first instance of classical calculations   
+        classicalInstance!(eParams,
+                           params[:bigN],
+                           bs,
+                           (τstart,τend),
+                           dfIntensity,
+                           dfCorr,
+                           dfFreqs,
+                           update = ud
+                          )
 
-		# # calculate the average photon counts in each time bin from the beam intensity and the overall average photon count rate
-		# γavg1Beam = γIntensity(intensity1Beam,nbar/2)
+        for n = 1:instances
 
-		# # generate counts for each beam
-		# γcounts1Beam1 = poissonCount.(γavg1Beam)
-		# γcounts1Beam2 = poissonCount.(γavg1Beam)
+            # calculate the average photon counts in each time bin from the beam intensity and the overall average photon count rate
+            γavgBeam = γIntensity(dfIntensity[!,end],params[:nbar]/2)
 
-		# # concatenate the correlations from this run into all others
-		# allCorrTimes = vcat(allCorrTimes,corrTimes(τ,γcounts1Beam1,γcounts1Beam2))
+            # generate counts for each beam
+            γcountsBeam1 = poissonCount.(γavgBeam)
+            γcountsBeam2 = poissonCount.(γavgBeam)
 
-		# # add counts from both beams
-		# totCounts .+= γcounts1Beam1
-		# totCounts .+= γcounts1Beam2
+            # concatenate the correlations from this run into all others
+            allCorrTimes = vcat(allCorrTimes,corrTimes(τ,γcountsBeam1,γcountsBeam2))
 
-		# # reinstantiate if desired
-		# if makeInstances && n != trials
-			# # reinstantiate electric field
-			# eInstance1 = eFieldInstance(bigN,eParams)
+            # add counts from both beams
+            totCounts .+= γcountsBeam1
+            totCounts .+= γcountsBeam2
 
-			# # calculate electric field vs time
-			# eFieldT1 = map(t->electricField(t,eInstance1),times)
+            # reinstantiate if desired
+            if makeInstances && n != instances
+                classicalInstance!(eParams,params[:bigN],bs,(τstart,τend),dfIntensity,dfCorr,dfFreqs,update = ud)
+            end
+        end
+        
+        ########################################################################
+        # photon counting
+        ########################################################################
+        corrHist = fit(Histogram,allCorrTimes,vcat(τ,τ[end]+params[:tres]),closed=:left)
 
-			# # apply beam splitter
-			# eFieldT1Beam = bs.t * eFieldT1
+        # normalize the histogram
+        normCorr = corrHist.weights/sum(corrHist.weights)
 
-			# # calculate intensity
-			# intensity1Beam = intensity.(eFieldT1Beam)
+        # subtract mean from histogram to reduce constant term
+        normAvgCorr = normCorr .- mean(normCorr)
 
-			# # calculate classical g2τ
-			# g2τ1Norm = mean(intensity1Beam)^2
-			# g2τ1 = map(i->autocorrelate(intensity1Beam,i,window),collect(0:window-1))/g2τ1Norm
+        # take the fourier transform
+        γfft = fft(normAvgCorr)
 
-			# # calculate Fourier transform of this instance
-			# g2τ1FFT = meanFFT(g2τ1,(τstart,τend))
+        # recover fourier transform frequencies
+        γfreqs = fftfreq(length(γfft),1/params[:tres])
 
-			# # accumulate Fourier transform sum
-			# g2τ1FFTsum .+= g2τ1FFT
-		# end
-	# end
-	# # end
+        # select positive frequencies for plotting
+        γfftPos,γfreqsPos = fftPositiveFreq(γfft,γfreqs)
 
-	# g2τ1FFTsinglePos,allfreqsPos = fftPositiveFreq(g2τ1FFT,allfreqs)
+        ########################################################################
+        # ---- Make plots and export data ----
+        ########################################################################
+        prefix = makeName(params)
 
-    # # bin correlation times into a histogram
-	# corrHist = fit(Histogram,allCorrTimes,vcat(τ,τ[end]+tres),closed=:left)
+        ########################################################################
+        # classical results
+        ########################################################################
 
-	# # normalize the histogram
-	# normCorr = corrHist.weights/sum(corrHist.weights)
+        # classical data
+        classicalFreqData(dfFreqs,params,prefix)
 
-	# # subtract mean from histogram to reduce constant term
-	# normAvgCorr = normCorr .- mean(normCorr)
+        # single fourier transform plot
+        classicalSinglePlot(dfFreqs,params,prefix)
 
-	# # take the fourier transform
-	# γfft = fft(normAvgCorr)
+        # sum of all fourier transforms plot
+        classicalSumPlot(dfFreqs,params,prefix)
 
-	# # recover fourier transform frequencies
-	# γfreqs = fftfreq(length(γfft),1/tres)
+        ########################################################################
+        # photon counting results
+        ########################################################################
+        γCorrFreqPlot(γfreqsPos,γfftPos,params,prefix)
 
-	# # select positive frequencies for plotting
-	# γfftPos,γfreqsPos = fftPositiveFreq(γfft,γfreqs)
-
-
-    # γCorrFreqPlot = plot(γfreqsPos,abs.(γfftPos),label = false)
-	# xlabel!(γCorrFreqPlot,"frequency (GHz)")
-	# title!(γCorrFreqPlot,"Fourier transform of photon correlations")
-	# vline!(γCorrFreqPlot,[shift],label="Frequency shift",ls=:dash)
-
+        println("----- Finished run $i -----")
+    end
 
 end
 

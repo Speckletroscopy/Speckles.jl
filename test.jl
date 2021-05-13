@@ -8,32 +8,6 @@ function run()
     # Specify parameters
     ############################################################################ 
     makeInstances = true
-
-    # tres = 0.01 # 10 picoseconds
-    # tmax = 20.0 # in nanoseconds
-    
-    # # set simulation seed (-1 for arbitrary seed)
-    # seed = -1
-
-    # # set the number of emitting atoms
-    # bigN = 100
-
-    # # Balmer-α lines specified here
-    # ωM = [456811.0, 456815.0]
-    # shift = ωM[2]-ωM[1]
-    # ωM = 2*π*ωM
-    
-    # # magnitude of each line
-    # mag = convert(Vector{ComplexF64},ones(length(ωM)))
-
-    # # Doppler broadening
-    # temp = 1000.0 # Kelvins
-    # σDopp = σTemp(ωM[1],temp)
-
-    # # photon counts
-    # nbar = 10
-    # ntot = 1000
-
     paramDict = Dict(
                      :tres=>[0.01], # in nanoseconds
                      :tmax=>[10.0,100.0,1000.0], # nanoseconds

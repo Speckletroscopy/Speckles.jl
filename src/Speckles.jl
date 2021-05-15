@@ -232,6 +232,4 @@ end
 
 export γCorrFreqPlot
 
-
-
 end

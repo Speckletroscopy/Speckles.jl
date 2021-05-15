@@ -60,6 +60,47 @@ end
 
 export autocorrTimes
 
+"""
+    γCoincidentτ(beam1::Vector{T}, beam2::Vector{T}) where {T<:Number}
+
+Returns the separation index between the first coincident counts of beam 1 and 2.
+Returns -1 if no coincident counts are calculated.
+"""
+function γCoincidentIndex(beam1::Vector{T}, beam2::Vector{T}) where {T<:Number}
+    @assert length(beam1) == length(beam2) "Beam vectors must have equal length"
+    # iterate through beam 1
+    for (i,nbar) in enumerate(beam1)
+        if poissonCount(nbar) > 0
+            for (j,mbar) in enumerate(beam2[i:end])
+                if poissonCount(mbar) > 0
+                    # return the separation index between coincident counts
+                    return j-1 # subtract 1 since that's where Julia indexing starts
+                end
+            end
+            return -1
+        end
+    end
+    return -1
+end
+
+export γCoincidentIndex
+
+"""
+    firstNonzero(a::Vector)
+
+Returns the index of the first non-zero element in a.
+Returns -1 if all values are zero.
+"""
+function firstNonzero(a::Vector)
+    for (i,val) in enumerate(a)
+        if val != 0
+            return i
+        end
+    end
+    return -1
+end
+
+export firstNonzero
 ################################################################################
 # Counting Related Functions
 ################################################################################

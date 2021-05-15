@@ -8,19 +8,31 @@ function run()
     # Specify parameters
     ############################################################################ 
     makeInstances = true
+    # paramDict = Dict(
+                     # :tres=>[0.01], # in nanoseconds
+                     # :tmax=>[10.0,100.0,1000.0], # nanoseconds
+                     # :bigN=>[10,50,100,500], # number of atoms
+                     # :mag=>[convert(Vector{ComplexF64},ones(3))], # field magnitude
+                     # :νM=>[[456811.0,456813.0,456815.0]], # line frequencies
+                     # :temp=>[5000], # Kelvins
+                     # :nbar=>[10,50,100,500], # average photon counts in measurement period
+                     # :ntot=>[10000], # approximate total photon counts
+                     # :reset=>[1.0], # detector reset time in nanoseconds
+                     # :seed=>[-1] # set seed for reproducible results
+                    # )
+
     paramDict = Dict(
                      :tres=>[0.01], # in nanoseconds
-                     :tmax=>[10.0,100.0,1000.0], # nanoseconds
-                     :bigN=>[10,50,100,500], # number of atoms
-                     :mag=>[convert(Vector{ComplexF64},ones(3))], # field magnitude
-                     :νM=>[[456811.0,456813.0,456815.0]], # line frequencies
+                     :tmax=>[10.0], # nanoseconds
+                     :bigN=>[10], # number of atoms
+                     :mag=>[convert(Vector{ComplexF64},ones(2))], # field magnitude
+                     :νM=>[[456811.0,456815.0]], # line frequencies
                      :temp=>[5000], # Kelvins
                      :nbar=>[10,50,100,500], # average photon counts in measurement period
-                     :ntot=>[10000], # approximate total photon counts
+                     :ntot=>[100000], # approximate total photon counts
                      :reset=>[1.0], # detector reset time in nanoseconds
                      :seed=>[-1] # set seed for reproducible results
                     )
-
     # split paramDict into iterable vector of dictionaries
     iterParams = paramVector(paramDict)
 
@@ -78,7 +90,10 @@ function run()
         totCounts = zeros(Integer,length(times))
 
         # concatenation of all photon correlation times
-        allCorrTimes = Vector{Float64}[]
+        allCorrTimes = Float64[]
+
+        # coincident photon count times
+        coincidentTimes = Float64[]
 
         # make first instance of classical calculations   
         classicalInstance!(eParams,
@@ -91,6 +106,7 @@ function run()
                            update = ud
                           )
 
+        maxTau = 1
         for n = 1:instances
 
             # calculate the average photon counts in each time bin from the beam intensity and the overall average photon count rate
@@ -99,6 +115,13 @@ function run()
             # generate counts for each beam
             γcountsBeam1 = poissonCount.(γavgBeam)
             γcountsBeam2 = poissonCount.(γavgBeam)
+
+            γ1 = firstNonzero(γcountsBeam1)
+            γ2 = firstNonzero(γcountsBeam2)
+            γi = abs(γ2-γ1)+1
+            maxTau = γi > maxTau ? γi : maxTau
+            # println("Coincident time = ",times[γi])
+            push!(coincidentTimes,times[γi])
 
             # concatenate the correlations from this run into all others
             allCorrTimes = vcat(allCorrTimes,corrTimes(τ,γcountsBeam1,γcountsBeam2))
@@ -117,6 +140,7 @@ function run()
         # photon counting
         ########################################################################
         corrHist = fit(Histogram,allCorrTimes,vcat(τ,τ[end]+params[:tres]),closed=:left)
+        coincidentHist = fit(Histogram,coincidentTimes,times[1:maxTau+1],closed=:left)
 
         # normalize the histogram
         normCorr = corrHist.weights/sum(corrHist.weights)
@@ -156,6 +180,11 @@ function run()
         ########################################################################
         γCorrFreqPlot(γfreqsPos,γfftPos,params,prefix)
 
+        coincidentPlot = plot(coincidentHist, label=false)
+        xlabel!(coincidentPlot,"Time between counts (ns)")
+        title!(coincidentPlot,"Coincident Photon Count Timing")
+        plotname = string(prefix,"coincident-counts-vs-time.svg")
+        savefig(coincidentPlot,plotsDir(plotname))
         println("----- Finished run $i -----")
     end
 

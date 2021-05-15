@@ -4,6 +4,10 @@
 
 - Wrote down the [procedure](simulation_procedure.md) followed by the simulation to generate photon correlations
 
+- Is persistent homology a good tool to find the strongest spectral lines in correlation measurements?
+
+  
+
 ### Speckle Noise Analysis
 The results of our paper show that the average intensity correlations are given by 
 $$
@@ -23,5 +27,21 @@ S(\tau) &= \left|\sum_{n=1}^Ne^{-i\omega_n\tau}\right|^2\\
 $$
 The quantity in equation $(\ref{eq:g2})$ is what we desire to calculate in the simulation, but the noise from equation $(\ref{eq:stauVar})$ is just the contribution from Doppler broadening. We must include additional sources of noise for a realistic simulation. 
 
-#### Shot (Poisson) Noise
+#### Shot Noise
+
+Each bin in the intensity time series is treated as the average photon counts for a Poisson distribution over the time interval of the bin. Hence, for average counts $\bar{n}_k$ in bin $k$, we expect fluctuations of $\sqrt{\bar{n}_k}$. 
+
+
+
+## Test program structure
+
+- Set up parameter dictionary
+- Instancing or not?
+- Set up objects that persist over all instances
+  - Photon counts
+  - Field dataframes
+  - Correlation times
+- Loop over instances
+
+ 
 

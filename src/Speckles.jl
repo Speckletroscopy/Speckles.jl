@@ -14,47 +14,32 @@ using Reexport
 
 include("CountGenerator.jl")
 include("SpeckleNoise.jl")
-include("ClassicalEM.jl")
+include("LightSource.jl")
 include("SpeckleFunctions.jl")
 include("SpeckleFT.jl")
+include("FileSave.jl")
 
-function plotsDir(name::String,dirname::String = "plots")
-    return joinpath(dirname,name)
-end
-
-export plotsDir
-
-function dataDir(name::String,dirname::String = "data")
-    return joinpath(dirname,name)    
-end
-
-export dataDir
-
-struct Beamsplitter
-    r::Number
-    t::Number
-    function Beamsplitter(r::Number,t::Number)
-        beamNorm = sqrt(r^2+t^2)
-        new(r/beamNorm,t/beamNorm)
-    end
-end
-
-export Beamsplitter
+export fieldInstance!
+export corrInstance!
+export ftInstance!
+export classicalInstance!
+export paramVector
+export makeName
 
 
 """
-    fieldInstance!(efieldp::eFieldParams,n::Integer,bs::Beamsplitter,df::DataFrame;update::String = "cat")
+    fieldInstance!(source::LightSource,bs::Beamsplitter,df::DataFrame;update::String = "cat")
 
 Advances df by an instance of the intensity calculation
 """
-function fieldInstance!(efieldp::eFieldParams,n::Integer,bs::Beamsplitter,df::DataFrame;update::String = "cat")
-    eInstance = eFieldInstance(n,efieldp)
+function fieldInstance!(source::LightSource,bs::Beamsplitter,df::DataFrame;update::String = "cat")
+    eInstance = eField(source)
     efieldt = map(t->electricField(t,eInstance),df.time)
     efieldtBeam = bs.t * efieldt
     inty = intensity.(efieldtBeam)
     if update == "sum"
         df[!,"intensity"] = inty
-        if "sum" in names(df)
+if "sum" in names(df)
             df[!,"sum"] .+= inty
         else
             df[!,"sum"] = inty
@@ -65,8 +50,6 @@ function fieldInstance!(efieldp::eFieldParams,n::Integer,bs::Beamsplitter,df::Da
     end
     return df
 end
-
-export fieldInstance!
 
 """
     corrInstance!(idf::DataFrame,cdf::DataFrame;update::String = "cat")
@@ -99,8 +82,6 @@ function corrInstance!(idf::DataFrame,cdf::DataFrame;update::String = "cat")
     return cdf
 end
 
-export corrInstance!
-
 """
     ftInstance!(cdf::DataFrame,ftdf::DataFrame,cuts::Tuple{T,T};update::String = "cat") where {T<:Integer}
 
@@ -123,21 +104,17 @@ function ftInstance!(cdf::DataFrame,ftdf::DataFrame,cuts::Tuple{T,T};update::Str
     return ftdf
 end
 
-export ftInstance!
-
 """
-    classicalInstance!(efieldp::eFieldParams,n::Integer,bs::Beamsplitter,cuts::Tuple{T,T},idf::DataFrame,cdf::DataFrame,ftdf::DataFrame;update::String = "cat") where {T<:Integer}
+    classicalInstance!(source::LightSource,n::Integer,bs::Beamsplitter,cuts::Tuple{T,T},idf::DataFrame,cdf::DataFrame,ftdf::DataFrame;update::String = "cat") where {T<:Integer}
 
 Advances idf, cdf, and ftdf by instances of the intensity, correlation, and correlation Fourier transform respectively
 """
-function classicalInstance!(efieldp::eFieldParams,n::Integer,bs::Beamsplitter,cuts::Tuple{T,T},idf::DataFrame,cdf::DataFrame,ftdf::DataFrame;update::String = "cat") where {T<:Integer}
-    fieldInstance!(efieldp,n,bs,idf,update = update)
+function classicalInstance!(source::LightSource,bs::Beamsplitter,cuts::Tuple{T,T},idf::DataFrame,cdf::DataFrame,ftdf::DataFrame;update::String = "cat") where {T<:Integer}
+    fieldInstance!(source,bs,idf,update = update)
     corrInstance!(idf,cdf,update=update)
     ftInstance!(cdf,ftdf,cuts,update=update)
     return idf,cdf,ftdf
 end
-
-export classicalInstance!
 
 # function filenameGenerator
 # function γCorrelate(intensity::Vector,nbar::Number,deadtime::Bool)
@@ -150,20 +127,24 @@ export classicalInstance!
     # γCountsBeam2 = poissonCount.(γAvgBeam)
 
     # # 
- 
-
-
 # end
 
+"""
+    paramVector(params::Dict)
+
+Splits multiple parameter dictionary into a vector of individual parameter dictionaries.
+"""
 function paramVector(params::Dict)
     k = collect(keys(params))
     v = collect(Iterators.product(collect(values(params))...))
     return map(vals->Dict(collect(zip(k,vals))),ivec(v))
 end
 
-export paramVector
+"""
+    makeName(params::Dict; excpt::Dict = Dict())
 
-
+Returns a string based on parameters in the simulation dictionary.
+"""
 function makeName(params::Dict; excpt::Dict = Dict())
     date = today()
     mm = length(month(date)) == 1 ? string(0,month(date)) : month(date)
@@ -180,56 +161,5 @@ function makeName(params::Dict; excpt::Dict = Dict())
     end
     return out
 end
-
-export makeName
-
-function classicalFreqData(dfFreqs::DataFrame,params::Dict,prefix::String)
-    dataName = string(prefix,"classical-frequency.csv")
-    CSV.write(dataDir(dataName),dfFreqs)
-end
-
-export classicalFreqData
-
-function classicalSinglePlot(dfFreqs::DataFrame, params::Dict, prefix::String)
-    shifts = map(x->abs(x[2]-x[1]),subsets(params[:νM],2))
-    singleplotName = string(prefix,"classical-single.svg")
-    single = dfFreqs.PowerSpec
-    ftSingle, ftFreqs = fftPositiveFreq(single,dfFreqs.freq)
-    singleplot = plot(ftFreqs,abs.(ftSingle),label=false)
-    vline!(shifts,label="Frequency shift",ls=:dash)
-    xlabel!("frequency (GHz)")
-	title!("\$\\hat{g}^{(2)}(\\nu)\$")
-    savefig(singleplot,plotsDir(singleplotName))
-    return nothing
-end
-
-export classicalSinglePlot
-
-function classicalSumPlot(dfFreqs::DataFrame, params::Dict, prefix::String)
-    shifts = map(x->abs(x[2]-x[1]),subsets(params[:νM],2))
-    nInstances = convert(Integer,ceil(params[:ntot]/params[:nbar]))
-    sumplotName = string(prefix,"classical-sum.svg")
-    ftSum, ftFreqs = fftPositiveFreq(dfFreqs.sum,dfFreqs.freq)
-    sumplot = plot(ftFreqs,abs.(ftSum),label=false)
-    vline!(shifts,label="Frequency shift",ls=:dash)
-    xlabel!("frequency (GHz)")
-    title!("\$\\sum_{i=1}^{$(nInstances)}\\hat{g}_i^{(2)}(\\nu)\$")
-    savefig(sumplot,plotsDir(sumplotName))
-    return nothing
-end
-
-export classicalSumPlot
-
-function γCorrFreqPlot(freqVec::Vector, fftVec::Vector, params::Dict, prefix::String)
-    shifts = map(x->abs(x[2]-x[1]),subsets(params[:νM],2))
-    γplotName = string(prefix,"photon-correlation.svg")
-	γplot = plot(freqVec,abs.(fftVec),label = false)
-	xlabel!("frequency (GHz)")
-	title!("Fourier transform of photon correlations")
-	vline!(shifts,label="Frequency shift",ls=:dash)
-    savefig(γplot,plotsDir(γplotName))
-end
-
-export γCorrFreqPlot
 
 end

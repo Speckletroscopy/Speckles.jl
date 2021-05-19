@@ -131,8 +131,8 @@ export countTimes
 
 Returns the average of the Doppler noise term
 """
-function stauAvg(τ::Number,params::eFieldParams,n::Integer)
-    return stauAvg(τ,params.σ,n)
+function stauAvg(τ::Number,source::LightSource)
+    return stauAvg(τ,source.σ,source.n)
 end
 
 """
@@ -150,12 +150,12 @@ end
 export stauAvg
 
 """
-    stauVar(τ::Number,params::eFieldParams,n::Integer)
+    stauVar(τ::Number,source::LightSource)
 
 Returns the variance of the Doppler noise term
 """
-function stauVar(τ::Number,params::eFieldParams,n::Integer)
-    return stauVar(τ,params.σ,n)
+function stauVar(τ::Number,source::LightSource)
+    return stauVar(τ,source.σ,source.n)
 end
 
 """
@@ -179,21 +179,21 @@ end
 export stauVar
 
 """
-    stau(τ::Number,instance::eFieldInstance)
+    stau(τ::Number,field::eField)
 
-Calculates the value of the Doppler noise term for the given eFieldInstance
+Calculates the value of the Doppler noise term for the given eField
 """
-function stau(τ::Number,instance::eFieldInstance)
-    return stau(τ,instance.ωn)
+function stau(τ::Number,field::eField)
+    return stau(τ,field.νn)
 end
 
 """
-    stau(τ::Number,ωn::Vector)
+    stau(τ::Number,νn::Vector)
 
 Calculates the value of the Doppler noise term for the given τ and frequencies
 """
-function stau(τ::Number,ωn::Vector)
-    terms = exp.(-im*τ*ωn)
+function stau(τ::Number,νn::Vector)
+    terms = exp.(-2.0*π*im*τ*νn)
     sumterms = sum(terms)
     return real(sumterms*conj(sumterms))
 end
@@ -201,12 +201,13 @@ end
 export stau
 
 """
-    g2Calc(τ::Number,n::Integer,params::eFieldParams)
+    g2Calc(τ::Number,n::Integer,source::LightSource)
 
 Returns the average calculated value of g2(τ) from MGST2021.
 """
-function g2Calc(τ::Number,n::Integer,params::eFieldParams)
-    em2 = real.(params.Em .* conj.(params.Em))
+function g2Calc(τ::Number,n::Integer,source::LightSource)
+    n = source.n
+    em2 = real.(source.Em .* conj.(source.Em))
     em4 = em2 .* em2
     sumEm2 = sum(em2)
     sumEm4 = sum(em4)
@@ -217,11 +218,10 @@ function g2Calc(τ::Number,n::Integer,params::eFieldParams)
 
     g2τ += term2
 
-    Δm = params.ωm .- params.ω0
-    term3 = sum(em2 .* exp.(-im*τ*Δm))/sumEm2
+    term3 = sum(em2 .* exp.(-im*τ*Δm(source)))/sumEm2
     term3 *= conj(term3)
     term3 = real(term3)
-    term3 *= stauAvg(τ,params,n)/n^2
+    term3 *= stauAvg(τ,source)/n^2
 
     return g2τ+term3
 end

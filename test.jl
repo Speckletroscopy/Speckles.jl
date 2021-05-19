@@ -2,6 +2,19 @@ module Tst
 
 using Speckles
 
+# struct SpeckleParams
+#     tres::Number
+#     tmax::Number
+#     bigN::Number
+#     mag::Vector
+#     νM::Vector
+
+# end
+function sigmaTemp5k()
+    σTemp(456811.0,5000.0)
+end
+export sigmaTemp5k
+
 function run()
 
     ############################################################################ 
@@ -28,8 +41,8 @@ function run()
                      :mag=>[convert(Vector{ComplexF64},ones(2))], # field magnitude
                      :νM=>[[456811.0,456815.0]], # line frequencies
                      :temp=>[5000], # Kelvins
-                     :nbar=>[10,50,100,500], # average photon counts in measurement period
-                     :ntot=>[100000], # approximate total photon counts
+                     :nbar=>[50], # average photon counts in measurement period
+                     :ntot=>[1000], # approximate total photon counts
                      :reset=>[1.0], # detector reset time in nanoseconds
                      :seed=>[-1] # set seed for reproducible results
                     )
@@ -196,4 +209,5 @@ end
 
 import .Tst
 
-Tst.run()
+# Tst.run()
+Tst.sigmaTemp5k()

@@ -2,11 +2,11 @@
 struct LightSource
     n::Integer # number of atoms
     Em::Vector # line magnitudes
-    νm::Vector # central frequencies of lines
-    σ::Number # Doppler broadening
-    νMin::Number # minimum bandpass frequency
-    νMax::Number # maximum bandpass frequency
-    γRate::Number # photon count rate in Hertz
+    νm::Vector # central frequencies of lines in GHz
+    σ::Number # Doppler broadening in GHz
+    νMin::Number # minimum bandpass frequency in GHz
+    νMax::Number # maximum bandpass frequency in GHz
+    γRate::Number # photon count rate in GHz
     function LightSource(n::Integer,Em::Vector,νm::Vector,σ::Number,νMin::Number,νMax::Number,γRate::Number)
         @assert length(Em) == length(νm) "Vectors for line magnitudes and frequencies must have the same length"
         @assert νMin < νMax "Bandpass minimum must be less than maximum"
@@ -23,8 +23,8 @@ struct LightSource
 end
 
 function LightSource(n::Integer,Em::Vector,νm::Vector,σ::Number, γRate::Number)
-    νMin = min(νm) - 5*σ # automatically set the bandpass minimum to 5σ below the lowest line frequency
-    νMax = max(νm) + 5*σ # automatically set the bandpass maximum to 5σ above the highest line frequency
+    νMin = min(νm...) - 5*σ # automatically set the bandpass minimum to 5σ below the lowest line frequency
+    νMax = max(νm...) + 5*σ # automatically set the bandpass maximum to 5σ above the highest line frequency
     return LightSource(n,Em,νm,σ,νMin,νMax,γRate)
 end
 
@@ -74,9 +74,9 @@ struct eField
     ϕmn::Matrix
     source::LightSource
 
-    function eField(ωn::Vector,ϕmn::Matrix,source::LightSource)
-        @assert (size(ϕmn)[1] == length(source.ωm) && size(ϕmn)[2] == length(ωn)) "Phase array must have shape (m,n)"
-        new(ωn,ϕmn,source)
+    function eField(νn::Vector,ϕmn::Matrix,source::LightSource)
+        @assert (size(ϕmn)[1] == length(source.νm) && size(ϕmn)[2] == length(νn)) "Phase array must have shape (m,n)"
+        new(νn,ϕmn,source)
     end
 end
 
@@ -92,17 +92,17 @@ function eField(source::LightSource, seed::Integer = -1)
     νDist = Normal(ν0(source),source.σ)
     νn    = rand(νDist,source.n)
     ϕmn   = 2*π*rand(Float64,(length(source.νm),source.n))
-    return eField(νn,ϕmn,params)
+    return eField(νn,ϕmn,source)
 end
 
 export eField
 
 """
-	function eField(t::Real,field::eField)
+	function eField(t::Number,field::eField)
 
-Returns the electric field value at time t
+Returns the electric field value at time t(ns)
 """
-function eFieldT(t::Real,field::eField)
+function eFieldT(t::Number,field::eField)
 	# generate frequencies
 	ωmn = transpose(field.νn) .+ Δm(field.source)
     ωmn .*= 2*π
@@ -122,25 +122,43 @@ export eFieldT
 # Calculate intensity
 ################################################################################
 """
-    intensity(eFieldT::Number)
+    intensity(et::Number)
 
 Returns the intensity given the value of the electric field at a particular point in time and space
 """
-function intensity(eFieldT::Number)
-    return real(eFieldT*conj(eFieldT))
+function intensity(et::Number)
+    return real(et*conj(et))
 end
 
 """
     intensity(t::Real,field::eField)
 
-Returns the intensity given an instance of the EM field and a time t.
+Returns the intensity given an instance of the EM field and a time t(ns).
 """
-function intensity(t::Real,field::eField)
-    eFieldT = eFieldT(t,field)
-    return intensity(eFieldT)
+function intensity(t::Number,field::eField)
+    efield = eFieldT(t,field)
+    return intensity(efield)
 end
 
 export intensity
+
+"""
+    γIntensity{T}(nbar::T,intensity::Vector{T}) where {T<:Real}
+
+Returns γIntensity object which contains the average photon count rate and the renormalized intensity time series
+"""
+struct γIntensity{T<:Real}
+    nbar::T
+    intensity::Vector{T}
+    function γIntensity{T}(nbar::T,intensity::Vector{T}) where {T<:Real}
+        total = sum(intensity)
+        coeff = nbar/total
+        nintensity = intensity .* coeff
+        new(nbar,nintensity)
+    end
+end
+
+export γIntensity
 
 """
     Beamsplitter(r::Number,t::Number)

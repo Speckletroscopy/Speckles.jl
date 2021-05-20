@@ -15,6 +15,7 @@ using Reexport
 include("CountGenerator.jl")
 include("SpeckleNoise.jl")
 include("LightSource.jl")
+include("Detector.jl")
 include("SpeckleFunctions.jl")
 include("SpeckleFT.jl")
 include("FileSave.jl")
@@ -33,6 +34,7 @@ export makeName
 Advances df by an instance of the intensity calculation
 """
 function fieldInstance!(source::LightSource,bs::Beamsplitter,df::DataFrame;update::String = "cat")
+    n = source.n
     eInstance = eField(source)
     efieldt = map(t->electricField(t,eInstance),df.time)
     efieldtBeam = bs.t * efieldt
@@ -105,12 +107,12 @@ function ftInstance!(cdf::DataFrame,ftdf::DataFrame,cuts::Tuple{T,T};update::Str
 end
 
 """
-    classicalInstance!(source::LightSource,n::Integer,bs::Beamsplitter,cuts::Tuple{T,T},idf::DataFrame,cdf::DataFrame,ftdf::DataFrame;update::String = "cat") where {T<:Integer}
+    classicalInstance!(field::eField,bs::Beamsplitter,cuts::Tuple{T,T},idf::DataFrame,cdf::DataFrame,ftdf::DataFrame;update::String = "cat") where {T<:Integer}
 
 Advances idf, cdf, and ftdf by instances of the intensity, correlation, and correlation Fourier transform respectively
 """
-function classicalInstance!(source::LightSource,bs::Beamsplitter,cuts::Tuple{T,T},idf::DataFrame,cdf::DataFrame,ftdf::DataFrame;update::String = "cat") where {T<:Integer}
-    fieldInstance!(source,bs,idf,update = update)
+function classicalInstance!(field::eField,bs::Beamsplitter,cuts::Tuple{T,T},idf::DataFrame,cdf::DataFrame,ftdf::DataFrame;update::String = "cat") where {T<:Integer}
+    fieldInstance!(field,bs,idf,update = update)
     corrInstance!(idf,cdf,update=update)
     ftInstance!(cdf,ftdf,cuts,update=update)
     return idf,cdf,ftdf

@@ -25,7 +25,6 @@ Returns Bose-Einstein distributed counts for average count rate nbar
 """
 function beCount(nbar::Real)
 	p = 1/(nbar+1)
-	fnbar = p*nbar
 	f = p*nbar
 	s = p
 	r = rand()
@@ -39,16 +38,3 @@ function beCount(nbar::Real)
 end
 
 export poissonCount
-
-"""
-	function γIntensity(intensity::Vector,nbar::Real)
-
-Calculates the photon count rate in each bin of an intensity histogram
-"""
-function γIntensity(intensity::Vector,nbar::Real)
-	nintensity = intensity/sum(intensity)
-	return nbar*nintensity
-end
-
-export γIntensity
-

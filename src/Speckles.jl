@@ -8,6 +8,7 @@ using Reexport
 @reexport using Distributions
 @reexport using DataFrames
 @reexport using LinearAlgebra
+@reexport using SparseArrays
 @reexport using IterTools
 @reexport using CSV
 @reexport using FFTW

@@ -60,23 +60,23 @@ function readout(t::Number,field::eField,detect::Detector)
     return readout(γint,detect)
 end
 
-function readout(γint:γIntensity,detect::Detector)
+"""
+    readout(γint:γIntensity,detect::Detector)
 
-end
-
-function generate(t::Number,dt::Number,dead::Integer,γRate::Number)
-    nbar = γRate*dt
-    out = Integer[]
+Returns a sparse vector containing the nonzero counts received by the detector for the given photon intensity time-series
+"""
+function readout(γint::γIntensity,detect::Detector)
+    out = sparsevec(Integer[],Integer[],length(γint.intensity))
     i = 1
-    while (i-1)*dt < t
-        if poissonCount(nbar) != 0
-            push!(out,i)
-            i+=dead
-        else
-            i+=1
+    while i ≤ length(γint.intensity)
+        ct = poissonCount(γint.intensity[i])
+        if ct != 0
+            out[i] = ct
+            i+=detect.deadtime
         end
+        i+=1
     end
     return out
 end
 
-export generate
+export readout

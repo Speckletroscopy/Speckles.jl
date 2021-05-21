@@ -32,6 +32,92 @@ end
 
 export testDetector
 
+function run2()
+
+    # specify all parameters
+    νHα = [456812, 456808,456811, 456802] #GHz
+    EmHα = ones(length(νHα))
+
+    paramDict = Dict(
+                    :n    => [10,100], # number of atoms
+                    :νm   => [νHα], # line frequencies in GHz
+                    :Em   => [EmHα], # relative line magnitudes
+                    :σ    => [20.0], # Doppler broadening in GHz
+                    :fγ   => [0.16], # mean photon count rate in GHz
+                    :deadtime   => [10.0], # detector deadtime in nanoseconds
+                    :resolution => [0.010,0.1], # detector resolution in nanoseconds
+                    :jitter     => [0.015], # detector timing jitter in nanoseconds 
+                    :efficiency => [0.9], # detector efficiency
+                    :darkcounts => [1.0e-8], # detector dark count rate in GHz
+                    :duration   => [1.0e3], # duration of each correlation measurement in nanoseconds
+                    :repeat     => [1], # number of times to repeat correlation measurement
+                    :reinstance => [false], # control whether or not frequencies and phases should be reinstanced between measurements
+                    :timeint    => [5.0e2] # time over which to average correlations in nanoseconds
+                    )
+
+    # split into vector of dictionaries: one for each run
+    iterParams = paramVector(paramDict)
+    
+    # define beamsplitter
+    bs = Beamsplitter(0.5,0.5)
+
+    params = iterParams[1]
+    # loop over run dictionaries
+    # for params in iterParams
+        # create LightSource and Detector objects
+        source = LightSource(
+            params[:n],
+            params[:Em],
+            params[:νm],
+            params[:σ],
+            params[:fγ]
+        )
+        detect = Detector(
+            params[:deadtime],
+            params[:resolution],
+            params[:jitter],
+            params[:efficiency],
+            params[:darkcounts]
+        )
+
+        γint = γIntensity(
+            nbar(params[:duration],source)*0.5, # multiply by 0.5 for two beams 
+            params[:duration],
+            detect.resolution,
+            source
+            )
+
+        # for i=1:params[:repeat]
+        #     if i % 10 == 0
+        #         println(i)
+        #     end
+            # get photon readouts for each detector
+            readout1 = readout(γint,detect)
+            readout2 = readout(γint,detect)
+
+            nzcorrOffset1 = readout2.nzind[1] - readout1.nzind[1]
+            # readout1[readout1.nzind[1]]
+
+            indexint = length(γint)÷convert(Int,ceil(params[:duration]/params[:timeint]))
+            
+            # TODO: Finish making correlation function
+            sum(readout1[readout1.nzind[1]:readout1.nzind[1]+indexint] .* readout2[readout2.nzind[1]:readout2.nzind[1]+indexint])
+            # return readout1,readout2
+            # reinstantiate avg photon intensity if desired
+            # if params[:reinstance]
+            #     γint = γIntensity(
+            #         nbar(params[:duration],source)*0.5,
+            #         params[:duration],
+            #         detect.resolution,
+            #         source
+            #         )
+            # end
+        # end
+    # end
+    
+
+end
+
 function run()
 
     ############################################################################ 
@@ -215,4 +301,4 @@ end
 import .Tst
 # Tst.run()
 # Tst.sigmaTemp5k()
-Tst.testDetector()
+Tst.run2()

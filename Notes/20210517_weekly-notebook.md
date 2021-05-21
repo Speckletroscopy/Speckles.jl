@@ -10,12 +10,12 @@
 
 ## Classical Plots
 ### Instances: 1
-![](../plots/202105013_tres=0.01_tmax=10.0_len-νM=2_ntot=100000_nbar=10_bigN=10_reset=1.0_temp=5000_len-mag=2_seed=-1_classical-single.svg)
+![](202105013_tres=0.01_tmax=10.0_len-%CE%BDM=2_ntot=100000_nbar=10_bigN=10_reset=1.0_temp=5000_len-mag=2_seed=-1_classical-single.svg)
 
 ### Instances: $10^4$
 
 
-![](../plots/202105013_tres=0.01_tmax=10.0_len-νM=2_ntot=100000_nbar=10_bigN=10_reset=1.0_temp=5000_len-mag=2_seed=-1_classical-sum.svg)
+![](202105013_tres=0.01_tmax=10.0_len-%CE%BDM=2_ntot=100000_nbar=10_bigN=10_reset=1.0_temp=5000_len-mag=2_seed=-1_classical-sum.svg)
 
 
 ## Photon Counting Plots
@@ -36,11 +36,11 @@ $$
 - Make a histogram of all time correlations
 - Take the Fourier transform of the resulting histogram
 	
-![](../plots/202105013_tres=0.01_tmax=10.0_len-νM=2_ntot=100000_nbar=10_bigN=10_reset=1.0_temp=5000_len-mag=2_seed=-1_photon-correlation.svg)
+![](202105013_tres=0.01_tmax=10.0_len-%CE%BDM=2_ntot=100000_nbar=10_bigN=10_reset=1.0_temp=5000_len-mag=2_seed=-1_photon-correlation.svg)
 
 We can see that there is no visible correlation at the line-difference frequency. This is probably because (a) I use a boolean correlation function which wipes out the magnitude of each correlation instance, (b) the Poisson variance is large since the number of counts is small, and (c) the re-instancing the frequencies and phases does not allow the Poisson-distributed photon counts to approach an average.
 
 ### Approach \#2
 
 
-![](../plots/202105013_tres=0.01_tmax=10.0_len-νM=2_ntot=100000_nbar=10_bigN=10_reset=1.0_temp=5000_len-mag=2_seed=-1_coincident-counts-vs-time.svg)
+![](202105013_tres=0.01_tmax=10.0_len-%CE%BDM=2_ntot=100000_nbar=10_bigN=10_reset=1.0_temp=5000_len-mag=2_seed=-1_coincident-counts-vs-time.svg)

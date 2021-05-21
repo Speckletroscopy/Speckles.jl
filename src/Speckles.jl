@@ -1,6 +1,7 @@
 module Speckles
 
 using Reexport
+@reexport using Logging
 @reexport using Plots
 @reexport using Dates
 @reexport using Random
@@ -14,11 +15,11 @@ using Reexport
 @reexport using FFTW
 
 include("CountGenerator.jl")
-include("SpeckleNoise.jl")
+include("Noise.jl")
 include("LightSource.jl")
 include("Detector.jl")
-include("SpeckleFunctions.jl")
-include("SpeckleFT.jl")
+include("SpecialFunctions.jl")
+include("FourierTransform.jl")
 include("FileSave.jl")
 
 export fieldInstance!

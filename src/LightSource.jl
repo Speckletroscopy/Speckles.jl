@@ -63,6 +63,17 @@ end
 
 export lineShifts
 
+"""
+    nbar(t::Real,source::LightSource)
+
+Returns the average photon counts received over a duration t from source
+"""
+function nbar(t::Real,source::LightSource)
+    return t*source.γRate
+end
+
+export nbar
+
 ################################################################################
 # Electric field 
 ################################################################################
@@ -142,23 +153,59 @@ end
 
 export intensity
 
+
 """
-    γIntensity{T}(nbar::T,intensity::Vector{T}) where {T<:Real}
+    γIntensity(nbar::T,γvec::Vector{T}) where T<:Real
 
 Returns γIntensity object which contains the average photon count rate and the renormalized intensity time series
 """
 struct γIntensity{T<:Real}
     nbar::T
-    intensity::Vector{T}
-    function γIntensity{T}(nbar::T,intensity::Vector{T}) where {T<:Real}
-        total = sum(intensity)
+    γvec::Vector{T}
+    function γIntensity(nbar::T,γvec::Vector{T}) where T<:Real
+        total = sum(γvec)
         coeff = nbar/total
-        nintensity = intensity .* coeff
-        new(nbar,nintensity)
+        return new{T}(nbar,coeff*γvec)
     end
 end
 
+function γIntensity(nbar::Real,t::Real,dt::Real,source::LightSource)
+    field = eField(source)
+    return γIntensity(nbar,t,dt,field)
+end
+
+function γIntensity(nbar::Real,t::Real,dt::Real,field::eField)
+    intensitySeries = map(time->intensity(time,field),0:dt:t)
+    return γIntensity(nbar,intensitySeries)
+end
+
 export γIntensity
+
+# array indexing and iteration interface for γIntensity object
+function Base.length(γint::γIntensity)
+    return length(γint.γvec)
+end
+
+function Base.getindex(γint::γIntensity,i::Int)
+    return γint.γvec[i]
+end
+
+function Base.firstindex(γint::γIntensity)
+    return γint.γvec[1]
+end
+
+function Base.lastindex(γint::γIntensity)
+    return γint.γvec[end]
+end
+
+function Base.iterate(γint::γIntensity)
+    return (Base.firstindex(γint),1)
+end
+
+function Base.iterate(γint::γIntensity,state::Int)
+    return state >= length(γint) ? nothing : (γint[state+1],state+1)
+end
+
 
 """
     Beamsplitter(r::Number,t::Number)
@@ -174,4 +221,5 @@ struct Beamsplitter
     end
 end
 
+export Beamsplitter
 

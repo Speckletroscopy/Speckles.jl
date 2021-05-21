@@ -28,5 +28,12 @@ field = eField(source,42)
 @test intensity(0.5) == 0.25
 @test intensity(0.01,field) ≈ 6.060748222475236
 
+t = 10.0 #nanoseconds
+dt = 0.1 #nanoseconds
+nbar = 100.0
+intensityVec = map(time->intensity(time,field),0:dt:t)
+γVec = γIntensity(nbar,intensityVec)
+@test sum(γVec.γvec)≈nbar
+
 bs =  Beamsplitter(1,1)
 @test bs.r^2+bs.t^2 ≈ 1.0

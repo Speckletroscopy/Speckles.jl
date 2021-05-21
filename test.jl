@@ -2,18 +2,35 @@ module Tst
 
 using Speckles
 
-# struct SpeckleParams
-#     tres::Number
-#     tmax::Number
-#     bigN::Number
-#     mag::Vector
-#     νM::Vector
-
-# end
 function sigmaTemp5k()
     σTemp(456811.0,5000.0)
 end
 export sigmaTemp5k
+
+function testDetector()
+    # light source parameters
+    n = 10
+    νm = [456812, 456808,456811, 456802]
+    Em = ones(length(νm))
+    σ = 20.0
+    γRate = 0.01 # in GHz
+
+    # detector parameters
+    deadtime = 10.0 #nanoseconds
+    resolution = 0.015 #nanoseconds
+    jitter = 0.015 #nanoseconds
+    efficiency = 0.9
+    darkcounts = 1.0e-8 #GHz
+
+    # create detector and light source objects
+    source = LightSource(n,Em,νm,σ,γRate)
+    detect = Detector(deadtime,resolution,jitter,efficiency,darkcounts)
+    
+    nbar(1.0e9,source)
+    # readout(1.0e4,source,detect)
+end
+
+export testDetector
 
 function run()
 
@@ -21,18 +38,6 @@ function run()
     # Specify parameters
     ############################################################################ 
     makeInstances = true
-    # paramDict = Dict(
-                     # :tres=>[0.01], # in nanoseconds
-                     # :tmax=>[10.0,100.0,1000.0], # nanoseconds
-                     # :bigN=>[10,50,100,500], # number of atoms
-                     # :mag=>[convert(Vector{ComplexF64},ones(3))], # field magnitude
-                     # :νM=>[[456811.0,456813.0,456815.0]], # line frequencies
-                     # :temp=>[5000], # Kelvins
-                     # :nbar=>[10,50,100,500], # average photon counts in measurement period
-                     # :ntot=>[10000], # approximate total photon counts
-                     # :reset=>[1.0], # detector reset time in nanoseconds
-                     # :seed=>[-1] # set seed for reproducible results
-                    # )
 
     paramDict = Dict(
                      :tres=>[0.01], # in nanoseconds
@@ -208,6 +213,6 @@ export run
 end
 
 import .Tst
-
 # Tst.run()
-Tst.sigmaTemp5k()
+# Tst.sigmaTemp5k()
+Tst.testDetector()

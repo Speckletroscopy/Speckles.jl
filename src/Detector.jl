@@ -17,7 +17,7 @@ struct Detector
 end
 
 """
-    Detector(deadtime::Number,resolution::Number,efficiency::Number,darkcounts::Number)
+    Detector(deadtime::Number,resolution::Number,jitter::Number,efficiency::Number,darkcounts::Number)
 
 Returns a Detector object.
 
@@ -26,9 +26,9 @@ Inputs:
     resolution : time resolution in nanoseconds
     jitter     : timing jitter in nanoseconds
     efficiency : quantum efficiency ∈ [0,1]
-    darkcounts : dark count rate
+    darkcounts : dark count rate in GHz
 """
-function Detector(deadtime::Number,resolution::Number,efficiency::Number,darkcounts::Number)
+function Detector(deadtime::Number,resolution::Number,jitter::Number,efficiency::Number,darkcounts::Number)
     return Detector(
         convert(Float64,deadtime),
         convert(Float64,resolution),
@@ -38,10 +38,12 @@ function Detector(deadtime::Number,resolution::Number,efficiency::Number,darkcou
     )
 end
 
+export Detector
+
 """
     readout(t::Number,source::LightSource,detect::Detector)
 
-Returns the counts received by a detector from the given source over a time t (ns)
+Returns a sparse vector containing the nonzero counts received by the detector for the given duration t and LightSource
 """
 function readout(t::Number,source::LightSource,detect::Detector)
     field = eField(source)
@@ -51,12 +53,11 @@ end
 """
     readout(t::Number,field::eField,detect::Detector)
 
-Returns the counts received by a detector from the given incident EM field over a time t (ns)
+Returns a sparse vector containing the nonzero counts received by the detector for the given duration t and EM field
 """
 function readout(t::Number,field::eField,detect::Detector)
-    nbar = t*field.source.γRate # mean number of photons expected over time t
-    intensityVec = map(time->intensity(time,field),0:detect.resolution:t)
-    γint = γIntensity(nbar,intensityVec)
+    nb = nbar(t,field.source)
+    γint = γIntensity(nb,t,detect.resolution,field)
     return readout(γint,detect)
 end
 
@@ -66,13 +67,14 @@ end
 Returns a sparse vector containing the nonzero counts received by the detector for the given photon intensity time-series
 """
 function readout(γint::γIntensity,detect::Detector)
-    out = sparsevec(Integer[],Integer[],length(γint.intensity))
+    out = sparsevec(Integer[],Integer[],length(γint))
+    ideadtime = convert(Int,ceil(detect.deadtime/detect.resolution))
     i = 1
-    while i ≤ length(γint.intensity)
-        ct = poissonCount(γint.intensity[i])
+    while i ≤ length(γint)
+        ct = poissonCount(γint[i])
         if ct != 0
             out[i] = ct
-            i+=detect.deadtime
+            i+=ideadtime
         end
         i+=1
     end

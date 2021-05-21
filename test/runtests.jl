@@ -43,4 +43,4 @@ end
 
 import .SpeckleTest
 
-SpeckleTest.TestLightSource()
+SpeckleTest.TestDetector()

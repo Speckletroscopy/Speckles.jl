@@ -3,3 +3,4 @@
 tags
 .DS_Store
 .Speckles.jl.code-workspace
+.vscode

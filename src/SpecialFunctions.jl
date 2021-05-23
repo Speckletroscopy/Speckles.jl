@@ -38,6 +38,30 @@ end
 export autocorrelate
 
 """
+	ncorrelate(u::Vector{T},v::Vector{T},offset::Integer,window::Integer = -1) where {T<:Number}
+
+Calculates normalized correlation between vectors u and v with given offset. Specify averaging window to limit range of correlation. If the window extends beyond the end of one vector, it treats out-of-bounds indices as zero.
+"""
+function ncorrelate(u::Vector{T},v::Vector{T},offset::Integer,window::Integer = -1) where {T<:Number}
+
+	@assert offset <= length(u) "Offset out of bounds"
+	@assert window <= length(u) && window <= length(v) "Window must be smaller than input vector lengths"
+
+	if window == -1
+		window = length(u)
+	end
+
+	v1 = view(u,1:window)
+	v2 = view(v,1+offset:min(window+offset,length(v)))
+	if window+offset > length(v)
+		v2 = vcat(v2,zeros(window+offset-length(v)))
+	end
+
+	return dot(v1,v2)/(window*mean(v1)*mean(v2))
+end
+
+export ncorrelate
+"""
     function corrTimes(τ::Vector,γCounts::Vector)
 
 Returns an array of τ values for which the γCounts autocorrelation is non-zero.
@@ -205,7 +229,7 @@ export stau
 
 Returns the average calculated value of g2(τ) from MGST2021.
 """
-function g2Calc(τ::Number,n::Integer,source::LightSource)
+function g2Calc(τ::Number,source::LightSource)
     n = source.n
     em2 = real.(source.Em .* conj.(source.Em))
     em4 = em2 .* em2

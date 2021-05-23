@@ -78,6 +78,8 @@ export nbar
 # Electric field 
 ################################################################################
 """
+    eField(νn::Vector,ϕmn::Matrix,source::LightSource)
+
 Container holding frequencies and phases for one realization of the electric field.
 """
 struct eField

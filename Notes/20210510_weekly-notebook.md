@@ -1,4 +1,5 @@
 # Week of May 10, 2021
+#weekly #notes
 
 ## Notes
 
@@ -30,18 +31,3 @@ The quantity in equation $(\ref{eq:g2})$ is what we desire to calculate in the s
 #### Shot Noise
 
 Each bin in the intensity time series is treated as the average photon counts for a Poisson distribution over the time interval of the bin. Hence, for average counts $\bar{n}_k$ in bin $k$, we expect fluctuations of $\sqrt{\bar{n}_k}$. 
-
-
-
-## Test program structure
-
-- Set up parameter dictionary
-- Instancing or not?
-- Set up objects that persist over all instances
-  - Photon counts
-  - Field dataframes
-  - Correlation times
-- Loop over instances
-
- 
-

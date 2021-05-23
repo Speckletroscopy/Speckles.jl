@@ -41,32 +41,32 @@ end
 export Detector
 
 """
-    readout(t::Number,source::LightSource,detect::Detector)
+    sparseReadout(t::Number,source::LightSource,detect::Detector)
 
 Returns a sparse vector containing the nonzero counts received by the detector for the given duration t and LightSource
 """
-function readout(t::Number,source::LightSource,detect::Detector)
+function sparseReadout(t::Number,source::LightSource,detect::Detector)
     field = eField(source)
-    return readout(t,field,detect)
+    return sparseReadout(t,field,detect)
 end
 
 """
-    readout(t::Number,field::eField,detect::Detector)
+    sparseReadout(t::Number,field::eField,detect::Detector)
 
 Returns a sparse vector containing the nonzero counts received by the detector for the given duration t and EM field
 """
-function readout(t::Number,field::eField,detect::Detector)
+function sparseReadout(t::Number,field::eField,detect::Detector)
     nb = nbar(t,field.source)
     γint = γIntensity(nb,t,detect.resolution,field)
-    return readout(γint,detect)
+    return sparseReadout(γint,detect)
 end
 
 """
-    readout(γint:γIntensity,detect::Detector)
+    sparseReadout(γint:γIntensity,detect::Detector)
 
 Returns a sparse vector containing the nonzero counts received by the detector for the given photon intensity time-series
 """
-function readout(γint::γIntensity,detect::Detector)
+function sparseReadout(γint::γIntensity,detect::Detector)
     out = sparsevec(Integer[],Integer[],length(γint))
     ideadtime = convert(Int,ceil(detect.deadtime/detect.resolution))
     i = 1
@@ -81,4 +81,49 @@ function readout(γint::γIntensity,detect::Detector)
     return out
 end
 
-export readout
+export sparseReadout
+
+################################################################################
+"""
+    denseReadout(t::Number,source::LightSource,detect::Detector)
+
+Returns a dense vector containing the counts received by the detector for the given duration t and LightSource
+"""
+function denseReadout(t::Number,source::LightSource,detect::Detector)
+    field = eField(source)
+    return denseReadout(t,field,detect)
+end
+
+"""
+    denseReadout(t::Number,field::eField,detect::Detector)
+
+Returns a dense vector containing the counts received by the detector for the given duration t and EM field
+"""
+function denseReadout(t::Number,field::eField,detect::Detector)
+    nb = nbar(t,field.source)
+    γint = γIntensity(nb,t,detect.resolution,field)
+    return denseReadout(γint,detect)
+end
+
+"""
+    denseReadout(γint:γIntensity,detect::Detector)
+
+Returns a dense vector containing the counts received by the detector for the given photon intensity time-series
+"""
+function denseReadout(γint::γIntensity,detect::Detector)
+    rngvec = Poisson.(γint.γvec)
+    out = zeros(Int,length(γint))
+    ideadtime = convert(Int,ceil(detect.deadtime/detect.resolution))
+    i = 1
+    while i ≤ length(γint)
+        ct = rand(rngvec[i])
+        if ct != 0
+            out[i] = ct
+            i+=ideadtime
+        end
+        i+=1
+    end
+    return out
+end
+
+export denseReadout

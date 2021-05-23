@@ -7,30 +7,92 @@ function sigmaTemp5k()
 end
 export sigmaTemp5k
 
-function testDetector()
-    # light source parameters
-    n = 10
-    νm = [456812, 456808,456811, 456802]
-    Em = ones(length(νm))
-    σ = 20.0
-    γRate = 0.01 # in GHz
+function run3()
+    # specify all parameters
+    νHα = [456808,456811] #GHz
+    # νHα = [456812, 456808,456811, 456802] #GHz
+    EmHα = ones(length(νHα))
 
-    # detector parameters
-    deadtime = 10.0 #nanoseconds
-    resolution = 0.015 #nanoseconds
-    jitter = 0.015 #nanoseconds
-    efficiency = 0.9
-    darkcounts = 1.0e-8 #GHz
+    paramDict = Dict(
+                    :n    => [10], # number of atoms
+                    :νm   => [νHα], # line frequencies in GHz
+                    :Em   => [EmHα], # relative line magnitudes
+                    :σ    => [20.0], # Doppler broadening in GHz
+                    :fγ   => ["shot1%"], # mean photon count rate in GHz
+                    :deadtime   => [0.00,0.01,0.05], # detector deadtime in nanoseconds
+                    :resolution => [0.010], # detector resolution in nanoseconds
+                    :jitter     => [0.015], # detector timing jitter in nanoseconds 
+                    :efficiency => [0.9], # detector efficiency
+                    :darkcounts => [1.0e-8], # detector dark count rate in GHz
+                    :duration   => [20.0], # duration of each correlation measurement in nanoseconds
+                    :repeat     => [1], # number of times to repeat correlation measurement
+                    :reinstance => [false], # control whether or not frequencies and phases should be reinstanced between measurements
+                    :timeint    => ["halfwindow"] # time over which to average correlations in nanoseconds
+                    )
 
-    # create detector and light source objects
-    source = LightSource(n,Em,νm,σ,γRate)
-    detect = Detector(deadtime,resolution,jitter,efficiency,darkcounts)
+    # split into vector of dictionaries: one for each run
+    iterParams = paramVector(paramDict)
     
-    nbar(1.0e9,source)
-    # readout(1.0e4,source,detect)
+    # define beamsplitter
+    bs = Beamsplitter(0.5,0.5)
+
+    out = []
+    # iterate over parameter dictionaries
+    for params in iterParams
+        if params[:fγ] == "shot1%"
+            params[:fγ] = 2*1e4/params[:resolution] # multiply by 2 so error in each beam is ~1%
+        elseif params[:fγ] == "shot10%"
+            params[:fγ] = 2*1e2/params[:resolution] # multiply by 2 so error in each beam is ~1%
+        elseif params[:fγ] == "shot50%"
+            params[:fγ] = 2*4/params[:resolution] # multiply by 2 so error in each beam is ~1%
+        end
+        if params[:timeint] == "halfwindow"
+           params[:timeint] = params[:duration]/2 
+        end
+
+        # create LightSource and Detector objects
+        source = LightSource(
+            params[:n],
+            params[:Em],
+            params[:νm],
+            params[:σ],
+            params[:fγ]
+        )
+        detect = Detector(
+            params[:deadtime],
+            params[:resolution],
+            params[:jitter],
+            params[:efficiency],
+            params[:darkcounts]
+        )
+
+        # calculate the average photon counts for each time bin
+        γint = γIntensity(
+            nbar(params[:duration],source)*0.5, # multiply by 0.5 for two beams 
+            params[:duration],
+            detect.resolution,
+            source
+            )
+        
+        indexint = length(γint)÷convert(Int,ceil(params[:duration]/params[:timeint]))
+        times = params[:resolution]*collect(0:(indexint-1))
+        freqs = fftFreq(params[:resolution],times,(1,lastindex(times)))
+        timeData = DataFrame(:time=>times)
+        freqData = DataFrame(:freq=>freqs)
+        for i=1:params[:repeat]
+            # read out each beam
+            readout1 = denseReadout(γint,detect)
+            readout2 = denseReadout(γint,detect)
+            corr12 = map(offset->ncorrelate(readout1,readout2,offset,indexint),0:indexint)
+            iname = "corr$i"
+            timeData[!,iname] = corr12
+        end
+
+    end
+    return timedata
 end
 
-export testDetector
+export run3
 
 function run2()
 
@@ -95,14 +157,29 @@ function run2()
             readout1 = readout(γint,detect)
             readout2 = readout(γint,detect)
 
-            nzcorrOffset1 = readout2.nzind[1] - readout1.nzind[1]
+            return readout1,readout2
+            # nzcorrOffset1 = readout2.nzind[1] - readout1.nzind[1]
             # readout1[readout1.nzind[1]]
 
-            indexint = length(γint)÷convert(Int,ceil(params[:duration]/params[:timeint]))
+            # function nzrange(istart::int,irange::int,vec::sparsevector)
+            #     nzstart = vec.nzind[istart]
+            #     nzend = nzstart+irange
+            #     if nzend > length(vec)
+            #         nzend = length(vec)
+            #     end
+            #     return nzstart:nzend
+            # end
             
-            # TODO: Finish making correlation function
-            sum(readout1[readout1.nzind[1]:readout1.nzind[1]+indexint] .* readout2[readout2.nzind[1]:readout2.nzind[1]+indexint])
-            # return readout1,readout2
+            # function correlatesparsevectors(vec1::sparsevector, vec2::sparsevector)
+            #     return sum(vec1 .* vec2)/(sum(vec1)*sum(vec2))
+            # end
+            # indexint = length(γint)÷convert(int,ceil(params[:duration]/params[:timeint]))
+            
+            # countvec1 = readout1[nzrange(1,indexint,readout1)]
+            # countvec2 = readout2[nzrange(1,indexint,readout2)]
+
+
+            # correlateSparseVectors(countVec1,countVec2)
             # reinstantiate avg photon intensity if desired
             # if params[:reinstance]
             #     γint = γIntensity(
@@ -301,4 +378,5 @@ end
 import .Tst
 # Tst.run()
 # Tst.sigmaTemp5k()
-Tst.run2()
+# readout1,readout2 = Tst.run2()
+testvec = Tst.run3()

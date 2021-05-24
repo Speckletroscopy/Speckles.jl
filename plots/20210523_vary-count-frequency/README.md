@@ -1,0 +1,1 @@
+Count frequency for each plot is given in the filename in GHz under the $f\gamma$ parameter.

@@ -2,6 +2,7 @@ module Speckles
 
 using Reexport
 @reexport using Logging
+@reexport using LaTeXStrings
 @reexport using Plots
 @reexport using Dates
 @reexport using Random

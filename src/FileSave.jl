@@ -4,7 +4,6 @@ export Beamsplitter
 export classicalFreqData
 export classicalSinglePlot
 export classicalSumPlot
-export γCorrFreqPlot
 
 """
     plotsDir(name::String,dirname::String = "plots")
@@ -69,17 +68,67 @@ function classicalSumPlot(dfFreqs::DataFrame, params::Dict, prefix::String)
     return nothing
 end
 
+
+"""
+    γCorrTimePlot(timeVec::Vector, g2Vec::Vector, params::Dict, prefix::String)
+
+Saves plot of photon correlation time series
+"""
+function γCorrTimePlot(timeDF::DataFrame, params::Dict, prefix::String)
+    γplotName = string(prefix,"time-domain-photon-correlation.svg")
+    inzcorr  = timeDF[!,:corr1] .> 0
+    nzcorr = timeDF[!,:corr1][inzcorr]
+    nztime = timeDF[!,:time][inzcorr]
+	γplot = plot(nztime,nzcorr,label = false)
+    xlabel!(L"\tau \textrm{ (ns)}")
+	ylabel!("\$g^{(2)}(\\tau)\$")
+    title!("Photon Correlations vs Time Offset")
+    savefig(γplot,plotsDir(γplotName))
+    @info "Saved $(plotsDir(γplotName))"
+    if params[:repeat] > 1
+        γplotName = string(prefix,"time-domain-photon-correlation-sum.svg")
+        nzcorr = timeDF[!,:sum][inzcorr]
+        γplot = plot(nztime,nzcorr,label = false)
+        xlabel!(L"\tau \textrm{ (ns)}")
+        ylabel!("\$\\sum_{i=1}^{$(params[:repeat])}g_i^{(2)}(\\tau)\$")
+        title!("Sum of Photon Correlations vs Time Offset")
+        savefig(γplot,plotsDir(γplotName))
+        @info "Saved $(plotsDir(γplotName))"
+    end
+end
+
+export γCorrTimePlot
+
 """
     γCorrFreqPlot(freqVec::Vector, fftVec::Vector, params::Dict, prefix::String)
 
 Saves plot of photon correlation Fourier transform
 """
-function γCorrFreqPlot(freqVec::Vector, fftVec::Vector, params::Dict, prefix::String)
-    shifts = map(x->abs(x[2]-x[1]),subsets(params[:νM],2))
-    γplotName = string(prefix,"photon-correlation.svg")
-	γplot = plot(freqVec,abs.(fftVec),label = false)
+function γCorrFreqPlot(freqDF::DataFrame, params::Dict, prefix::String)
+    γplotName = string(prefix,"frequency-domain-photon-correlation.svg")
+	γplot = plot(freqDF[!,:freq],freqDF[!,:corr1],label = false)
 	xlabel!("frequency (GHz)")
-	title!("Fourier transform of photon correlations")
-	vline!(shifts,label="Frequency shift",ls=:dash)
+	ylabel!("\$\\hat{g}^{(2)}(\\nu)\$")
+	title!("Photon Correlations vs Frequency")
+    if length(params[:νm]) > 1
+        shifts = map(x->abs(x[2]-x[1]),subsets(params[:νm],2))
+        shiftname = length(params[:νm]) > 2 ? "frequency shifts" : "frequency shift"
+        vline!(shifts,label=shiftname,ls=:dash)
+    end
     savefig(γplot,plotsDir(γplotName))
+    if params[:repeat] > 1
+        γplotName = string(prefix,"frequency-domain-photon-correlation-sum.svg")
+        γplot = plot(freqDF[!,:freq],freqDF[!,:sum],label = false)
+        xlabel!("frequency (GHz)")
+        ylabel!("\$\\sum_{i=1}^{$(params[:repeat])}\\hat{g}^{(2)}(\\nu)\$")
+        title!("Sum of Photon Correlations vs Frequency")
+        if length(params[:νm]) > 1
+            shifts = map(x->abs(x[2]-x[1]),subsets(params[:νm],2))
+            shiftname = length(params[:νm]) > 2 ? "frequency shifts" : "frequency shift"
+            vline!(shifts,label=shiftname,ls=:dash)
+        end
+        savefig(γplot,plotsDir(γplotName))
+    end
 end
+
+export γCorrFreqPlot

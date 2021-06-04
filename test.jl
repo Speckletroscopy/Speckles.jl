@@ -5,8 +5,8 @@ using Speckles
 function run()
     # plotsPath = mkpath("plots/20210531_natoms")
     # dataPath = mkpath("data/20210531_natoms")
-    plotsPath = mkpath("plots/20210604_resolution")
-    dataPath = mkpath("data/20210604_resolution")
+    plotsPath = mkpath("plots/20210604_resolution_long")
+    dataPath = mkpath("data/20210604_resolution_long")
     # specify all parameters
     # νHα1 = [456808] #GHz
     νHα2 = [456810,456811] #GHz
@@ -23,8 +23,8 @@ function run()
                     :jitter     => [0.015], # detector timing jitter in nanoseconds 
                     :efficiency => [0.9], # detector efficiency
                     :darkcounts => [1.0e-8], # detector dark count rate in GHz
-                    :duration   => [20.0], # duration of each correlation measurement in nanoseconds
-                    :repeat     => [20], # number of times to repeat correlation measurement
+                    :duration   => [100.0], # duration of each correlation measurement in nanoseconds
+                    :repeat     => [100], # number of times to repeat correlation measurement
                     :reinstance => [true], # control whether or not frequencies and phases should be reinstanced between measurements
                     :timeint    => ["halfwindow"] # time over which to average correlations in nanoseconds
                     # :directory  => [] # defaults to main package directory

@@ -22,59 +22,52 @@ Concatenates string with name of data directory
 function dataDir(name::String,dirname::String = "data")
     return joinpath(dirname,name)    
 end
-"""
-    classicalFreqData(dfFreqs::DataFrame,params::Dict,prefix::String)
 
-Saves frequency dataframe to a csv file.
 """
-function classicalFreqData(dfFreqs::DataFrame,params::Dict,prefix::String)
-    dataName = string(prefix,"classical-frequency.csv")
-    CSV.write(dataDir(dataName),dfFreqs)
+    γIntensityPlot(times::Array,γint::Array,prefix::String)
+
+Plots average photon counts and saves to file. Returns relative path to resulting plot.
+"""
+function γIntensityPlot(times::Array,γint::Array,prefix::String)
+    γplotName = string(prefix,"avg-photons-vs-time.svg")
+    γplot = plot(times,γint,label=false)
+    xlabel!("time (ns)")
+    ylabel!("Avg photon counts")
+    title!("Average Photon Counts vs Time")
+    savefig(γplot,γplotName)
+    @info "Saved $γplotName"
+    return γplotName
 end
 
-"""
-    classicalSinglePlot(dfFreqs::DataFrame, params::Dict, prefix::String)
+export γIntensityPlot
 
-Saves plot of single instance classical correlation Fourier transform.
 """
-function classicalSinglePlot(dfFreqs::DataFrame, params::Dict, prefix::String)
-    shifts = map(x->abs(x[2]-x[1]),subsets(params[:νM],2))
-    singleplotName = string(prefix,"classical-single.svg")
-    single = dfFreqs.PowerSpec
-    ftSingle, ftFreqs = fftPositiveFreq(single,dfFreqs.freq)
-    singleplot = plot(ftFreqs,abs.(ftSingle),label=false)
-    vline!(shifts,label="Frequency shift",ls=:dash)
-    xlabel!("frequency (GHz)")
-	title!("\$\\hat{g}^{(2)}(\\nu)\$")
-    savefig(singleplot,plotsDir(singleplotName))
-    return nothing
+    γCountPlot(times::Array,γint::Array,prefix::String)
+
+Plots 'measured' photon counts and saves to file. Returns relative path to resulting plot.
+"""
+function γCountPlot(times::Array,γcount::Array, γint::Array,prefix::String)
+    γplotName = string(prefix,"photon-counts-vs-time.svg")
+    γplot = bar(times,γcount,label="Simulated Counts")
+    sig1 = sqrt.(γint)
+    sig1low = map(x -> x < 1 ? x : sqrt(x),γint)
+    plot!(γplot,times,γint,label = "Average Counts"; ribbon = (sig1low,sig1))
+    xlabel!("time (ns)")
+    ylabel!("photon counts")
+    title!("Photon Counts vs Time")
+    savefig(γplot,γplotName)
+    @info "Saved $γplotName"
+    return γplotName
 end
 
-"""
-    classicalSumPlot(dfFreqs::DataFrame, params::Dict, prefix::String)
-
-Saves plot of multi-look classical correlation Fourier transform.
-"""
-function classicalSumPlot(dfFreqs::DataFrame, params::Dict, prefix::String)
-    shifts = map(x->abs(x[2]-x[1]),subsets(params[:νM],2))
-    nInstances = convert(Integer,ceil(params[:ntot]/params[:nbar]))
-    sumplotName = string(prefix,"classical-sum.svg")
-    ftSum, ftFreqs = fftPositiveFreq(dfFreqs.sum,dfFreqs.freq)
-    sumplot = plot(ftFreqs,abs.(ftSum),label=false)
-    vline!(shifts,label="Frequency shift",ls=:dash)
-    xlabel!("frequency (GHz)")
-    title!("\$\\sum_{i=1}^{$(nInstances)}\\hat{g}_i^{(2)}(\\nu)\$")
-    savefig(sumplot,plotsDir(sumplotName))
-    return nothing
-end
-
-
+export γCountPlot
 """
     γCorrTimePlot(timeVec::Vector, g2Vec::Vector, params::Dict, prefix::String)
 
 Saves plot of photon correlation time series
 """
 function γCorrTimePlot(timeDF::DataFrame, params::Dict, prefix::String)
+    out = []
     γplotName = string(prefix,"time-domain-photon-correlation.svg")
     inzcorr  = timeDF[!,:corr1] .> 0
     nzcorr = timeDF[!,:corr1][inzcorr]
@@ -83,8 +76,9 @@ function γCorrTimePlot(timeDF::DataFrame, params::Dict, prefix::String)
     xlabel!(L"\tau \textrm{ (ns)}")
 	ylabel!("\$g^{(2)}(\\tau)\$")
     title!("Photon Correlations vs Time Offset")
-    savefig(γplot,plotsDir(γplotName))
-    @info "Saved $(plotsDir(γplotName))"
+    savefig(γplot,γplotName)
+    push!(out,γplotName)
+    @info "Saved $(γplotName)"
     if params[:repeat] > 1
         γplotName = string(prefix,"time-domain-photon-correlation-sum.svg")
         nzcorr = timeDF[!,:sum][inzcorr]
@@ -92,9 +86,11 @@ function γCorrTimePlot(timeDF::DataFrame, params::Dict, prefix::String)
         xlabel!(L"\tau \textrm{ (ns)}")
         ylabel!("\$\\sum_{i=1}^{$(params[:repeat])}g_i^{(2)}(\\tau)\$")
         title!("Sum of Photon Correlations vs Time Offset")
-        savefig(γplot,plotsDir(γplotName))
-        @info "Saved $(plotsDir(γplotName))"
+        savefig(γplot,γplotName)
+        push!(out,γplotName)
+        @info "Saved $(γplotName)"
     end
+    return out
 end
 
 export γCorrTimePlot
@@ -105,6 +101,7 @@ export γCorrTimePlot
 Saves plot of photon correlation Fourier transform
 """
 function γCorrFreqPlot(freqDF::DataFrame, params::Dict, prefix::String)
+    out = []
     γplotName = string(prefix,"frequency-domain-photon-correlation.svg")
 	γplot = plot(freqDF[!,:freq],freqDF[!,:corr1],label = false)
 	xlabel!("frequency (GHz)")
@@ -115,7 +112,9 @@ function γCorrFreqPlot(freqDF::DataFrame, params::Dict, prefix::String)
         shiftname = length(params[:νm]) > 2 ? "frequency shifts" : "frequency shift"
         vline!(shifts,label=shiftname,ls=:dash)
     end
-    savefig(γplot,plotsDir(γplotName))
+    savefig(γplot,γplotName)
+    push!(out,γplotName)
+    @info "Saved $(γplotName)"
     if params[:repeat] > 1
         γplotName = string(prefix,"frequency-domain-photon-correlation-sum.svg")
         γplot = plot(freqDF[!,:freq],freqDF[!,:sum],label = false)
@@ -127,8 +126,11 @@ function γCorrFreqPlot(freqDF::DataFrame, params::Dict, prefix::String)
             shiftname = length(params[:νm]) > 2 ? "frequency shifts" : "frequency shift"
             vline!(shifts,label=shiftname,ls=:dash)
         end
-        savefig(γplot,plotsDir(γplotName))
+        savefig(γplot,γplotName)
+        push!(out,γplotName)
+        @info "Saved $(γplotName)"
     end
+    return out
 end
 
 export γCorrFreqPlot

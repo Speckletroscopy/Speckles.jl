@@ -1,4 +1,3 @@
-
 struct LightSource
     n::Integer # number of atoms
     Em::Vector # line magnitudes

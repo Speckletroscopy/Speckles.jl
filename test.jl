@@ -2,32 +2,32 @@ module Tst
 
 using Speckles
 
-function sigmaTemp5k()
-    σTemp(456811.0,5000.0)
-end
-export sigmaTemp5k
-
 function run()
+    # plotsPath = mkpath("plots/20210531_natoms")
+    # dataPath = mkpath("data/20210531_natoms")
+    plotsPath = mkpath("plots/20210604_resolution")
+    dataPath = mkpath("data/20210604_resolution")
     # specify all parameters
-    νHα1 = [456808] #GHz
-    νHα2 = [456808,456811] #GHz
+    # νHα1 = [456808] #GHz
+    νHα2 = [456810,456811] #GHz
     # νHα = [456812, 456808,456811, 456802] #GHz
 
     paramDict = Dict(
-                    :n    => [10], # number of atoms
+                    :n    => [100],#,20,40,80,160], # number of atoms
                     :νm   => [νHα2], # line frequencies in GHz
                     :Em   => ["ones"], # relative line magnitudes
                     :σ    => [20.0], # Doppler broadening in GHz
-                    :fγ   => ["shot1%"], # mean photon count rate in GHz
-                    :deadtime   => [0.00,0.01,0.025,0.05,0.1], # detector deadtime in nanoseconds
-                    :resolution => [0.010], # detector resolution in nanoseconds
+                    :fγ   => [2.0e6],#"shot10%","shot50%",10.0,1.0,0.16], # mean photon count rate in GHz
+                    :deadtime   => [0.0], # detector deadtime in nanoseconds
+                    :resolution => [0.010,0.10], # detector resolution in nanoseconds
                     :jitter     => [0.015], # detector timing jitter in nanoseconds 
                     :efficiency => [0.9], # detector efficiency
                     :darkcounts => [1.0e-8], # detector dark count rate in GHz
                     :duration   => [20.0], # duration of each correlation measurement in nanoseconds
-                    :repeat     => [10], # number of times to repeat correlation measurement
+                    :repeat     => [20], # number of times to repeat correlation measurement
                     :reinstance => [true], # control whether or not frequencies and phases should be reinstanced between measurements
                     :timeint    => ["halfwindow"] # time over which to average correlations in nanoseconds
+                    # :directory  => [] # defaults to main package directory
                     )
 
     # split into vector of dictionaries: one for each run
@@ -73,7 +73,7 @@ function run()
 
         # calculate the average photon counts for each time bin
         γint = γIntensity(
-            nbar(params[:duration],source)*0.5, # multiply by 0.5 for two beams 
+            nbar(params[:duration],source)*bs.t, # apply beamsplitter 
             params[:duration],
             detect.resolution,
             source
@@ -103,6 +103,13 @@ function run()
             # read out each beam
             readout1 = denseReadout(γint,detect)
             readout2 = denseReadout(γint,detect)
+            
+            # plot intensity for the first instance
+            if i == 1
+                times = params[:resolution]*collect(0:(length(γint)-1))
+                # γIntensityPlot(times,γint.γvec,plotsDir(prefix,plotsPath))
+                γCountPlot(times .+ params[:resolution]/2,readout1,γint.γvec,plotsDir(prefix,plotsPath))
+            end
             # calculate correlation
             corr12 = map(offset->ncorrelate(readout1,readout2,offset,indexint),0:(indexint-1))
             # store instance in dataframe
@@ -118,7 +125,7 @@ function run()
             # generate new intensity instance if desired
             if params[:reinstance]
                 γint = γIntensity(
-                    nbar(params[:duration],source)*0.5, # multiply by 0.5 for two beams 
+                    nbar(params[:duration],source)*bs.t, # multiply by 0.5 for two beams 
                     params[:duration],
                     detect.resolution,
                     source
@@ -131,16 +138,16 @@ function run()
         freqData[!,:sum] = sum(eachcol(freqData)[2:end])
         
         # make names for data files
-        timeDataName = dataDir(string(prefix,"g2-vs-tau.csv"))
-        freqDataName = dataDir(string(prefix,"ftg2-vs-freq.csv"))
+        timeDataName = dataDir(string(prefix,"g2-vs-tau.csv"),dataPath)
+        freqDataName = dataDir(string(prefix,"ftg2-vs-freq.csv"),dataPath)
         
         # save data
         CSV.write(timeDataName,timeData)
         CSV.write(freqDataName,freqData)
         
         # create and save plots
-        γCorrTimePlot(timeData, params, prefix)
-        γCorrFreqPlot(freqData, params, prefix)
+        γCorrTimePlot(timeData, params, plotsDir(prefix,plotsPath))
+        γCorrFreqPlot(freqData, params, plotsDir(prefix,plotsPath))
     end
     return nothing
 end #run

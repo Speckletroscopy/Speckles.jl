@@ -1,0 +1,67 @@
+```julia; echo = false; results = "hidden"
+using Speckles
+using Weave
+
+plotDirName = "../plots"
+dataDirName = "../data"
+```
+
+# Simulation Setup
+We may run through many different parameters by making a dictionary where we list the parameters we wish to iterate over. Below, I have included some keywords in the line magnitudes, photon count rate, and integration time which I will use to denote that these values should be calculated later.
+```julia; results = "hidden"
+
+νHα1 = [456808] #GHz
+νHα2 = [456808,456811] #GHz
+# νHα = [456812, 456808,456811, 456802] #GHz
+
+paramDict = Dict(
+                :n    => [10], # number of atoms
+                :νm   => [νHα2], # line frequencies in GHz
+                :Em   => ["ones"], # relative line magnitudes
+                :σ    => [20.0], # Doppler broadening in GHz
+                :fγ   => ["shot1%"], # mean photon count rate in GHz
+                :deadtime   => [0.0,0.01,0.05], # detector deadtime in nanoseconds
+                :resolution => [0.010], # detector resolution in nanoseconds
+                :jitter     => [0.015], # detector timing jitter in nanoseconds 
+                :efficiency => [0.9], # detector efficiency
+                :darkcounts => [1.0e-8], # detector dark count rate in GHz
+                :duration   => [20.0], # duration of each correlation measurement in nanoseconds
+                :repeat     => [10], # number of times to repeat correlation measurement
+                :reinstance => [true], # control whether or not frequencies and phases should be reinstanced between measurements
+                :timeint    => ["halfwindow"] # time over which to average correlations in nanoseconds
+# :directory  => [] # defaults to main package directory
+                )
+
+
+# define beamsplitter
+bs = Beamsplitter(0.5,0.5)
+```
+
+We may then use the following function to split the dictionary above into an array of single-parameter dictionaries:
+
+```julia 
+# split into vector of dictionaries: one for each run
+iterParams = paramVector(paramDict)
+
+# replace keywords with calculated values
+
+for params in iterParams
+    if params[:Em] == "ones" # sets all line magnitudes equal to one if true
+        params[:Em] = ones(length(params[:νm]))
+    end
+    if params[:fγ] == "shot1%"
+        params[:fγ] = 2*1e4/params[:resolution] # multiply by 2 so error in each beam is ~1%
+    elseif params[:fγ] == "shot10%"
+        params[:fγ] = 2*1e2/params[:resolution] # multiply by 2 so error in each beam is ~10%
+    elseif params[:fγ] == "shot50%"
+        params[:fγ] = 2*4/params[:resolution] # multiply by 2 so error in each beam is ~50%
+    end
+    if params[:timeint] == "halfwindow"
+       params[:timeint] = params[:duration]/2 
+    end
+end
+# output one of the dictionaries to see how it turned out
+iterParams[1]
+```
+
+ 

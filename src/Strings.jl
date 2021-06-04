@@ -26,3 +26,23 @@ function makeName(params::Dict; excpt::Dict = Dict())
 end
 
 export makeName
+
+"""
+    function paramTable(params::Dict)
+
+Returns a markdown table with given parameters
+"""
+function paramTable(params::Dict,names::Dict = Dict())
+    out = "| Name | Value |\n|:---:|:---:|\n"
+    for (key,value) in params
+        paramName = string(key)
+        if key in keys(names)
+            paramName = string(names[key])
+        end
+        out = string(out,"|$paramName|$value|\n")
+    end
+    return out
+
+end
+
+export paramTable

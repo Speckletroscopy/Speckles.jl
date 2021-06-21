@@ -5,8 +5,8 @@ using Speckles
 function run()
     # plotsPath = mkpath("plots/20210531_natoms")
     # dataPath = mkpath("data/20210531_natoms")
-    plotsPath = mkpath("plots/20210604_resolution_long")
-    dataPath = mkpath("data/20210604_resolution_long")
+    plotsPath = mkpath("plots/20210621_resolution_long")
+    dataPath = mkpath("data/20210621_resolution_long")
     # specify all parameters
     # νHα1 = [456808] #GHz
     νHα2 = [456810,456811] #GHz

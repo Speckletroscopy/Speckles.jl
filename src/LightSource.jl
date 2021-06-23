@@ -27,6 +27,16 @@ function LightSource(n::Integer,Em::Vector,νm::Vector,σ::Number, γRate::Numbe
     return LightSource(n,Em,νm,σ,νMin,νMax,γRate)
 end
 
+function LightSource(params::Dict)
+    return LightSource(
+        params[:n],
+        params[:Em],
+        params[:νm],
+        params[:σ],
+        params[:fγ]
+    )
+end
+
 export LightSource
 
 """

@@ -19,7 +19,7 @@ end
 """
     Detector(deadtime::Number,resolution::Number,jitter::Number,efficiency::Number,darkcounts::Number)
 
-Returns a Detector object.
+Returns a Detector object. Also accepts a dictionary with keywords matching the inputs below.
 
 Inputs:
     deadtime   : dead time in nanoseconds
@@ -36,6 +36,16 @@ function Detector(deadtime::Number,resolution::Number,jitter::Number,efficiency:
         convert(Float64,efficiency),
         convert(Float64,darkcounts)
     )
+end
+
+function Detector(params::Dict)
+    return Detector(
+            params[:deadtime],
+            params[:resolution],
+            params[:jitter],
+            params[:efficiency],
+            params[:darkcounts]
+        )
 end
 
 export Detector

@@ -1,1 +1,0 @@
-Deadtime in nanoseconds is given in the filename under the deadtime parameter.

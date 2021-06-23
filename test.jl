@@ -5,11 +5,11 @@ using Speckles
 function run()
     # plotsPath = mkpath("plots/20210531_natoms")
     # dataPath = mkpath("data/20210531_natoms")
-    plotsPath = mkpath("plots/20210621_resolution_long")
-    dataPath = mkpath("data/20210621_resolution_long")
+    plotsPath = mkpath("plots/20210621_roberto1")
+    dataPath = mkpath("data/20210621_roberto1")
     # specify all parameters
     # νHα1 = [456808] #GHz
-    νHα2 = [456810,456811] #GHz
+    νHα2 = [456810,456813] #GHz
     # νHα = [456812, 456808,456811, 456802] #GHz
 
     paramDict = Dict(
@@ -17,9 +17,9 @@ function run()
                     :νm   => [νHα2], # line frequencies in GHz
                     :Em   => ["ones"], # relative line magnitudes
                     :σ    => [20.0], # Doppler broadening in GHz
-                    :fγ   => [2.0e6],#"shot10%","shot50%",10.0,1.0,0.16], # mean photon count rate in GHz
+                    :fγ   => [2.0e6,"shot10%","shot50%",10.0,1.0,0.16], # mean photon count rate in GHz
                     :deadtime   => [0.0], # detector deadtime in nanoseconds
-                    :resolution => [0.010,0.10], # detector resolution in nanoseconds
+                    :resolution => [0.010],#,0.10], # detector resolution in nanoseconds
                     :jitter     => [0.015], # detector timing jitter in nanoseconds 
                     :efficiency => [0.9], # detector efficiency
                     :darkcounts => [1.0e-8], # detector dark count rate in GHz

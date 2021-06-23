@@ -19,8 +19,8 @@ begin
 					:νm   => [νHα1,νHα2], # line frequencies in GHz
 					:Em   => ["ones"], # relative line magnitudes
 					:σ    => [20.0], # Doppler broadening in GHz
-					:fγ   => ["shot1%"], # mean photon count rate in GHz
-					:deadtime   => [0.00,0.01,0.025,0.05,0.1], # detector deadtime in nanoseconds
+					:fγ   => [2*1e4/0.01], # mean photon count rate in GHz
+					:deadtime   => [0.00],#,0.01,0.025,0.05,0.1], # detector deadtime in nanoseconds
 					:resolution => [0.010], # detector resolution in nanoseconds
 					:jitter     => [0.015], # detector timing jitter in nanoseconds 
 					:efficiency => [0.9], # detector efficiency
@@ -43,9 +43,49 @@ iterParams = paramVector(paramDict);
 bs = Beamsplitter(0.5,0.5)
 
 # ╔═╡ adc32c75-b46f-4818-8de8-50d9990b26b0
-iterParams[1]
+for i=1:length(iterParams)
+	iterParams[i][:Em] = ones(length(iterParams[i][:νm]))
+	iterParams[i][:timeint] = iterParams[i][:duration]/2
+end
 
-# ╔═╡ 4e4cbf8d-9d06-4b09-a52e-761e2cefaa32
+# ╔═╡ d237c492-4bc3-45a7-a3b5-63a33988a94f
+prefixes = map(x->makeName(x),iterParams)
+
+# ╔═╡ e893f820-4be5-4810-84a9-b5629119fe1f
+function makeSource(params::Dict)
+	return LightSource(
+				params[:n],
+				params[:Em],
+				params[:νm],
+				params[:σ],
+				params[:fγ]
+			)
+end
+
+# ╔═╡ 4a19ac54-9617-4a29-a9e6-04cb91450470
+source = makeSource(iterParams[1])
+
+# ╔═╡ f4f1c6d6-2b3a-41b0-88e5-d0a59debed04
+function makeDetector(params::Dict)
+	return Detector(
+            params[:deadtime],
+            params[:resolution],
+            params[:jitter],
+            params[:efficiency],
+            params[:darkcounts]
+        )
+end
+
+# ╔═╡ dac6bbdc-8996-425b-8410-f789b71ea3d9
+detect = makeDetector(iterParams[1])
+
+# ╔═╡ 65bf052e-43c6-4743-b264-b04ae9843a2c
+γint = γIntensity(nbar(iterParams[1][:duration],source)*bs.t,
+	iterParams[1][:duration],
+	detect.resolution,
+	source)
+
+# ╔═╡ b10ddbe6-90eb-4e65-a972-d20f52ed7547
 
 
 # ╔═╡ Cell order:
@@ -54,4 +94,10 @@ iterParams[1]
 # ╠═5e100134-d913-44a5-ad2b-55d29e889304
 # ╠═4d9ab06d-6bae-4066-9333-4287a948112e
 # ╠═adc32c75-b46f-4818-8de8-50d9990b26b0
-# ╠═4e4cbf8d-9d06-4b09-a52e-761e2cefaa32
+# ╠═d237c492-4bc3-45a7-a3b5-63a33988a94f
+# ╠═e893f820-4be5-4810-84a9-b5629119fe1f
+# ╠═4a19ac54-9617-4a29-a9e6-04cb91450470
+# ╠═f4f1c6d6-2b3a-41b0-88e5-d0a59debed04
+# ╠═dac6bbdc-8996-425b-8410-f789b71ea3d9
+# ╠═65bf052e-43c6-4743-b264-b04ae9843a2c
+# ╠═b10ddbe6-90eb-4e65-a972-d20f52ed7547

@@ -1,6 +1,7 @@
 module Speckles
 
 using Reexport
+@reexport using JuliaDB
 @reexport using Logging
 @reexport using LaTeXStrings
 @reexport using Plots
@@ -33,191 +34,137 @@ struct SpeckleSim
 end
 
 #-------------------------------------------------------------------------------
-function run_010()
-    # plotsPath = mkpath("plots/20210531_natoms")
-    # dataPath = mkpath("data/20210531_natoms")
-    plotsPath = mkpath("plots/20210621_roberto1")
-    dataPath = mkpath("data/20210621_roberto1")
-    # specify all parameters
-    # νHα1 = [456808] #GHz
-    νHα2 = [456810,456813] #GHz
-    # νHα = [456812, 456808,456811, 456802] #GHz
+"""
+    DenseResults(beamData::IndexedTable, corrData::IndexedTable)
 
-    paramDict = Dict(
-                    :n    => [100],#,20,40,80,160], # number of atoms
-                    :νm   => [νHα2], # line frequencies in GHz
-                    :Em   => ["ones"], # relative line magnitudes
-                    :σ    => [20.0], # Doppler broadening in GHz
-                    :fγ   => [2.0e6,"shot10%","shot50%",10.0,1.0,0.16], # mean photon count rate in GHz
-                    :deadtime   => [0.0], # detector deadtime in nanoseconds
-                    :resolution => [0.010],#,0.10], # detector resolution in nanoseconds
-                    :jitter     => [0.015], # detector timing jitter in nanoseconds 
-                    :efficiency => [0.9], # detector efficiency
-                    :darkcounts => [1.0e-8], # detector dark count rate in GHz
-                    :duration   => [100.0], # duration of each correlation measurement in nanoseconds
-                    :repeat     => [100], # number of times to repeat correlation measurement
-                    :reinstance => [true], # control whether or not frequencies and phases should be reinstanced between measurements
-                    :timeint    => ["halfwindow"] # time over which to average correlations in nanoseconds
-                    # :directory  => [] # defaults to main package directory
-                    )
+Stores beam intensity and correlation data from Speckle simulation in a dense format.
+"""
+struct DenseResults
+    beamData::IndexedTable
+    corrData::IndexedTable
+end
 
-    # split into vector of dictionaries: one for each run
-    iterParams = paramVector(paramDict)
-    
-    # define beamsplitter
-    bs = Beamsplitter(0.5,0.5)
+"""
+    SparseResults(beamData::NDSparse, corrData::NDSparse)
 
-    # iterate over parameter dictionaries
-    for params in iterParams
-        if params[:Em] == "ones" # sets all line magnitudes equal to one if true
-            params[:Em] = ones(length(params[:νm]))
-        end
-        if params[:fγ] == "shot1%"
-            params[:fγ] = 2*1e4/params[:resolution] # multiply by 2 so error in each beam is ~1%
-        elseif params[:fγ] == "shot10%"
-            params[:fγ] = 2*1e2/params[:resolution] # multiply by 2 so error in each beam is ~10%
-        elseif params[:fγ] == "shot50%"
-            params[:fγ] = 2*4/params[:resolution] # multiply by 2 so error in each beam is ~50%
-        end
-        if params[:timeint] == "halfwindow"
-           params[:timeint] = params[:duration]/2 
-        end
+Stores beam intensity and correlation data from Speckle simulation in a sparse format.
+"""
+struct SparseResults
+    beamData::NDSparse
+    corrData::NDSparse
+end
 
-        # create naming prefix
-        prefix = makeName(params)
+"""
 
-        # create LightSource and Detector objects
-        source = LightSource(
-            params[:n],
-            params[:Em],
-            params[:νm],
-            params[:σ],
-            params[:fγ]
-        )
-        detect = Detector(
-            params[:deadtime],
-            params[:resolution],
-            params[:jitter],
-            params[:efficiency],
-            params[:darkcounts]
-        )
+    struct SpeckleParams
 
-        # calculate the average photon counts for each time bin
-        γint = γIntensity(
-            nbar(params[:duration],source)*bs.t, # apply beamsplitter 
-            params[:duration],
-            detect.resolution,
-            source
-            )
+Stores all relevant parameters to create a simulation
 
-        # calculate the length in indices of the time integration window
-        indexint = length(γint)÷convert(Int,ceil(params[:duration]/params[:timeint]))
-
-        # generate the correlation time offsets
-        τ = params[:resolution]*collect(0:(indexint-1))
-        
-        # create a 5 e-fold low cut in τ to get rid of non-periodic part of g2
-        τCutLow = sqrt(5)/params[:σ] # low τ cut in nanoseconds
-
-        # calculate index of τ cut
-        iτCutLow = convert(Int,ceil(τCutLow/params[:resolution]))
-
-        # get the frequencies for a Fourier transform over τ with cuts
-        freqs = fftFreq(params[:resolution],τ,(iτCutLow,lastindex(τ)))
-
-        # initialize time and frequency DataFrames
-        timeData = DataFrame(:time=>τ)
-        freqData = DataFrame(:freq=>freqs[freqs .>= 0])
-        
-        # iterate over desired number of repeats
-        for i=1:params[:repeat]
-            # read out each beam
-            readout1 = denseReadout(γint,detect)
-            readout2 = denseReadout(γint,detect)
-            
-            # plot intensity for the first instance
-            if i == 1
-                times = params[:resolution]*collect(0:(length(γint)-1))
-                # γIntensityPlot(times,γint.γvec,plotsDir(prefix,plotsPath))
-                γCountPlot(times .+ params[:resolution]/2,readout1,γint.γvec,plotsDir(prefix,plotsPath))
-            end
-            # calculate correlation
-            corr12 = map(offset->ncorrelate(readout1,readout2,offset,indexint),0:(indexint-1))
-            # store instance in dataframe
-            iname = "corr$i"
-            timeData[!,iname] = corr12
-            
-            # take the Fourier transform of the correlation function
-            ftcorr12 = meanFFT(corr12,(iτCutLow,lastindex(corr12)))
-            ftcorr12pos, = fftPositiveFreq(ftcorr12,freqs) 
-            
-            freqData[!,iname] = abs.(ftcorr12pos)
-
-            # generate new intensity instance if desired
-            if params[:reinstance]
-                γint = γIntensity(
-                    nbar(params[:duration],source)*bs.t, # multiply by 0.5 for two beams 
-                    params[:duration],
-                    detect.resolution,
-                    source
-                    )
-            end
-        end
-        
-        # create sum column in frequency and time DataFrames
-        timeData[!,:sum] = sum(eachcol(timeData)[2:end])
-        freqData[!,:sum] = sum(eachcol(freqData)[2:end])
-        
-        # make names for data files
-        timeDataName = dataDir(string(prefix,"g2-vs-tau.csv"),dataPath)
-        freqDataName = dataDir(string(prefix,"ftg2-vs-freq.csv"),dataPath)
-        
-        # save data
-        CSV.write(timeDataName,timeData)
-        CSV.write(freqDataName,freqData)
-        
-        # create and save plots
-        γCorrTimePlot(timeData, params, plotsDir(prefix,plotsPath))
-        γCorrFreqPlot(freqData, params, plotsDir(prefix,plotsPath))
+--- LightSource variables ---
+n::UInt = Number of atoms
+νm::Vector{Float64}    = Line frequencies in GHz
+Em::Vector{Float64}    = Relative line magnitudes
+σ::Float64             = Doppler broadening in GHz 
+fγ::Float64            = Mean photon cout rate in GHz
+--- Detector variables ---
+deadtime::Float64      = Detector deadtime in nanoseconds
+resolution::Float64    = Detector resolutinon in nanoseconds
+jitter::Float64        = Detector jitter in nanoseconds
+efficiency::Float64    = Detector efficiency
+darkcounts::Float64    = Detector dark count rate in GHz
+--- Simulation parameter variables ---
+duration::Float64      = Duration of readout in nanoseconds
+window::Float64        = Duration of time averaging in nanoseconds
+repeat::UInt           = Number of times to repeat correlation measurement
+reinstance::Bool       = Randomize frequencies and phases after each repeat
+"""
+struct SpeckleParams{T<:Float64}
+    # LightSource variables
+    n::UInt # Number of atoms
+    νm::Vector{T} # Line frequencies in GHz
+    Em::Vector{T} # Relative line magnitudes
+    σ::T # Doppler broadening in GHz 
+    fγ::T # Mean photon cout rate in GHz
+    # Detector variables
+    deadtime::T # Detector deadtime in nanoseconds
+    resolution::T # Detector resolutinon in nanoseconds
+    jitter::T # Detector jitter in nanoseconds
+    efficiency::T # Detector efficiency
+    darkcounts::T # Detector dark count rate in GHz
+    # Simulation parameter variables
+    duration::T # Duration of readout in nanoseconds
+    window::T # Duration of time averaging in nanoseconds
+    repeat::UInt # T of times to repeat correlation measurement
+    reinstance::Bool # Randomize frequencies and phases after each repeat
+    function SpeckleParams{T}(n::UInt, νm::Vector{T}, Em::Vector{T}, σ::T, 
+                              fγ::T, deadtime::T, resolution::T, jitter::T,
+                              efficiency::T, darkcounts::T, duration::T,
+                              window::T, repeat::UInt, reinstance::Bool) where T<:Float64
+        @assert length(νm) == length(Em) "Line magnitudes and frequencies must match lengths"
+        new(n, νm, Em, σ, fγ, deadtime, resolution, jitter, efficiency,
+            darkcounts, duration, window, repeat, reinstance)
     end
-    return nothing
-end #run_010
+end
 
-export run_010
+"""
+    function SpeckleParams(n::Number, νm::Vector{Number}, Em::Vector{Number}, σ::Number, 
+                              fγ::Number, deadtime::Number, resolution::Number, jitter::Number,
+                              efficiency::Number, darkcounts::Number, duration::Number,
+                              window::Number, repeat::Number, reinstance::Bool)
 
-#-------------------------------------------------------------------------------
+Outer contructor for the SpeckleParams datatype that allows for more general type input.
+"""
+function SpeckleParams(n::Number, νm::Vector{Number}, Em::Vector{Number}, σ::Number, 
+                          fγ::Number, deadtime::Number, resolution::Number, jitter::Number,
+                          efficiency::Number, darkcounts::Number, duration::Number,
+                          window::Number, repeat::Number, reinstance::Bool)
 
-function run_020()
+    SpeckleParams( convert(UInt, n),
+                  convert(Vector{Float64},νm),
+                  convert(Vector{Float64},Em),
+                  convert(Float64,σ),
+                  convert(Float64,fγ),
+                  convert(Float64,deadtime),
+                  convert(Float64,resolution),
+                  convert(Float64,jitter),
+                  convert(Float64,efficiency),
+                  convert(Float64,darkcounts),
+                  convert(Float64,duration),
+                  convert(Float64,window),
+                  convert(UInt,repeat),
+                  reinstance
+                 )
+end
 
-    νHα2 = [456810,456813] #GHz
-    paramDict = Dict(
-                    :n    => [100],#,20,40,80,160], # number of atoms
-                    :νm   => [νHα2], # line frequencies in GHz
-                    :Em   => ["ones"], # relative line magnitudes
-                    :σ    => [20.0], # Doppler broadening in GHz
-                    :fγ   => [2.0e6,"shot10%","shot50%",10.0,1.0,0.16], # mean photon count rate in GHz
-                    :deadtime   => [0.0], # detector deadtime in nanoseconds
-                    :resolution => [0.010],#,0.10], # detector resolution in nanoseconds
-                    :jitter     => [0.015], # detector timing jitter in nanoseconds 
-                    :efficiency => [0.9], # detector efficiency
-                    :darkcounts => [1.0e-8], # detector dark count rate in GHz
-                    :duration   => [100.0], # duration of each correlation measurement in nanoseconds
-                    :repeat     => [100], # number of times to repeat correlation measurement
-                    :reinstance => [true], # control whether or not frequencies and phases should be reinstanced between measurements
-                    :timeint    => ["halfwindow"] # time over which to average correlations in nanoseconds
-                    # :directory  => [] # defaults to main package directory
-                    )
+"""
+    function SpeckleParamsVector(params::Dict)
 
-    iterParams = paramVector(paramDict) # split into vector of dictionaries: one for each run
-    keyReplace!.(iterParams) # replace keywords with proper values
+Takes a dictionary of proper keywords with values or vectors of values for a
+SpeckleParam struct and splits it into all possible valid combinations of
+those values. Returns a vector of SpeckleParams.
+"""
+function SpeckleParamsVector(params::Dict)
+    paramVec = paramVector(params)
+    out = map(p->SpeckleParams(p[:n],
+                               p[:νm],
+                               p[:Em],
+                               p[:σ],
+                               p[:fγ],
+                               p[:deadtime],
+                               p[:resolution],
+                               p[:jitter],
+                               p[:efficiency],
+                               p[:darkcounts],
+                               p[:duration],
+                               p[:window],
+                               p[:repeat],
+                               p[:reinstance]
+                              ),
+                              paramVec
+                             )
 
-    bs = Beamsplitter(0.5,0.5) # create beamsplitter
-
-    sources = LightSource.(iterParams)
-    detectors = Detector.(iterParams)
-
-
-end # run_020
+    return out
+end
 
 #-------------------------------------------------------------------------------
 function keyReplace!(params::Dict)

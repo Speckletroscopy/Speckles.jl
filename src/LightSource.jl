@@ -1,3 +1,5 @@
+#-------------------------------------------------------------------------------
+
 struct LightSource
     n::Integer # number of atoms
     Em::Vector # line magnitudes
@@ -39,6 +41,8 @@ end
 
 export LightSource
 
+#-------------------------------------------------------------------------------
+
 """
     ν0(source::LightSource)
 
@@ -49,6 +53,8 @@ function ν0(source::LightSource)
 end
 
 export ν0
+
+#-------------------------------------------------------------------------------
 
 """
     Δm(source::LightSource)
@@ -61,6 +67,8 @@ end
 
 export Δm
 
+#-------------------------------------------------------------------------------
+
 """
     lineShifts(source::LightSource)
 
@@ -71,6 +79,8 @@ function lineShifts(source::LightSource)
 end
 
 export lineShifts
+
+#-------------------------------------------------------------------------------
 
 """
     nbar(t::Real,source::LightSource)
@@ -119,6 +129,8 @@ end
 
 export eField
 
+#-------------------------------------------------------------------------------
+
 """
 	function eField(t::Number,field::eField)
 
@@ -164,6 +176,7 @@ end
 
 export intensity
 
+#-------------------------------------------------------------------------------
 
 """
     γIntensity(nbar::T,γvec::Vector{T}) where T<:Real
@@ -192,22 +205,32 @@ end
 
 export γIntensity
 
+#-------------------------------------------------------------------------------
+
 # array indexing and iteration interface for γIntensity object
 function Base.length(γint::γIntensity)
     return length(γint.γvec)
 end
 
+#-------------------------------------------------------------------------------
+
 function Base.getindex(γint::γIntensity,i::Int)
     return γint.γvec[i]
 end
+
+#-------------------------------------------------------------------------------
 
 function Base.firstindex(γint::γIntensity)
     return γint.γvec[1]
 end
 
+#-------------------------------------------------------------------------------
+
 function Base.lastindex(γint::γIntensity)
     return γint.γvec[end]
 end
+
+#-------------------------------------------------------------------------------
 
 function Base.iterate(γint::γIntensity)
     return (Base.firstindex(γint),1)
@@ -217,6 +240,7 @@ function Base.iterate(γint::γIntensity,state::Int)
     return state >= length(γint) ? nothing : (γint[state+1],state+1)
 end
 
+#-------------------------------------------------------------------------------
 
 """
     Beamsplitter(r::Number,t::Number)

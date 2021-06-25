@@ -1,9 +1,12 @@
-export plotsDir
-export dataDir
-export Beamsplitter
-export classicalFreqData
-export classicalSinglePlot
-export classicalSumPlot
+"""
+    function resultsDir()
+
+Returns the name of the directory where results are being stored
+"""
+function resultsDir()
+    return results_directory
+end
+export resultsDir
 
 """
     plotsDir(name::String,dirname::String = "plots")
@@ -13,6 +16,7 @@ Concatenates string with name of plots directory
 function plotsDir(name::String,dirname::String = "plots")
     return joinpath(dirname,name)
 end
+export plotsDir
 
 """
     dataDir(name::String,dirname::String = "data")
@@ -22,6 +26,7 @@ Concatenates string with name of data directory
 function dataDir(name::String,dirname::String = "data")
     return joinpath(dirname,name)    
 end
+export dataDir
 
 """
     γIntensityPlot(times::Array,γint::Array,prefix::String)
@@ -66,7 +71,7 @@ export γCountPlot
 
 Saves plot of photon correlation time series
 """
-function γCorrTimePlot(timeDF::DataFrame, params::Dict, prefix::String)
+function γCorrTimePlot(timeDF::IndexedTable, params::Dict, prefix::String)
     out = []
     γplotName = string(prefix,"time-domain-photon-correlation.svg")
     inzcorr  = timeDF[!,:corr1] .> 0
@@ -100,7 +105,7 @@ export γCorrTimePlot
 
 Saves plot of photon correlation Fourier transform
 """
-function γCorrFreqPlot(freqDF::DataFrame, params::Dict, prefix::String)
+function γCorrFreqPlot(freqDF::IndexedTable, params::Dict, prefix::String)
     out = []
     γplotName = string(prefix,"frequency-domain-photon-correlation.svg")
 	γplot = plot(freqDF[!,:freq],freqDF[!,:corr1],label = false)

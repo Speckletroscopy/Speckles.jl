@@ -17,19 +17,18 @@ function run()
                     :efficiency => [0.9], # detector efficiency
                     :darkcounts => [1.0e-8], # detector dark count rate in GHz
                     :duration   => [100.0], # duration of each correlation measurement in nanoseconds
+                    :window     => ["halfwindow"], # time over which to average correlations in nanoseconds
                     :repeat     => [100], # number of times to repeat correlation measurement
-                    :reinstance => [true], # control whether or not frequencies and phases should be reinstanced between measurements
-                    :timeint    => ["halfwindow"] # time over which to average correlations in nanoseconds
+                    :reinstance => [true] # control whether or not frequencies and phases should be reinstanced between measurements
                     # :directory  => [] # defaults to main package directory
                     )
 
-    iterParams = paramVector(paramDict) # split into vector of dictionaries: one for each run
-    keyReplace!.(iterParams) # replace keywords with proper values
+    paramVec = SpeckleParamsVector(paramDict)
+    simVec = SpeckleSim.(paramVec)
+    Speckles.run(simVec[1])
+    resultsDir()
 
-    bs = Beamsplitter(0.5,0.5) # create beamsplitter
 
-    sources = LightSource.(iterParams)
-    detectors = Detector.(iterParams)
 end
 export run
 

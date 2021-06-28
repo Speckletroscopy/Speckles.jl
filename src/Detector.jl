@@ -50,90 +50,102 @@ end
 
 export Detector
 
-"""
-    sparseReadout(t::Number,source::LightSource,detect::Detector)
+#-------------------------------------------------------------------------------
 
-Returns a sparse vector containing the nonzero counts received by the detector for the given duration t and LightSource
-"""
-function sparseReadout(t::Number,source::LightSource,detect::Detector)
-    field = eField(source)
-    return sparseReadout(t,field,detect)
-end
+# define a type for both dense and sparse sim results
+abstract type SpeckleReadout end
+export SpeckleReadout
+
+#-------------------------------------------------------------------------------
 
 """
-    sparseReadout(t::Number,field::eField,detect::Detector)
+    DenseReadout(beamData::IndexedTable, corrData::IndexedTable)
 
-Returns a sparse vector containing the nonzero counts received by the detector for the given duration t and EM field
+Stores beam intensity from Speckle simulation in a dense format.
 """
-function sparseReadout(t::Number,field::eField,detect::Detector)
-    nb = nbar(t,field.source)
-    γint = γIntensity(nb,t,detect.resolution,field)
-    return sparseReadout(γint,detect)
-end
-
-"""
-    sparseReadout(γint:γIntensity,detect::Detector)
-
-Returns a sparse vector containing the nonzero counts received by the detector for the given photon intensity time-series
-"""
-function sparseReadout(γint::γIntensity,detect::Detector)
-    out = sparsevec(Integer[],Integer[],length(γint))
-    ideadtime = convert(Int,ceil(detect.deadtime/detect.resolution))
-    i = 1
-    while i ≤ length(γint)
-        ct = poissonCount(γint[i])
-        if ct != 0
-            out[i] = ct
-            i+=ideadtime
-        end
-        i+=1
+struct DenseReadout <: SpeckleReadout
+    beam1::Vector
+    beam2::Vector
+    function DenseReadout(beam1::Vector,beam2::Vector)
+        @assert length(beam1) == length(beam2) "Beam readout vectors must have same length"
+        new(beam1,beam2)
     end
-    return out
 end
 
-export sparseReadout
+export DenseReadout
+#-------------------------------------------------------------------------------
+"""
+    SparseReadout(beamData::NDSparse, corrData::NDSparse)
 
+Stores beam intensity from Speckle simulation in a sparse format.
+"""
+struct SparseReadout <: SpeckleReadout
+    beam1::SparseVector
+    beam2::SparseVector
+    function SparseReadout(beam1::SparseVector,beam2::SparseVector)
+        @assert length(beam1) == length(beam2) "Beam readout vectors must have same length"
+        new(beam1,beam2)
+    end
+end
+
+export SparseReadout
 ################################################################################
 """
-    denseReadout(t::Number,source::LightSource,detect::Detector)
+    denseReadout(t::Number,source::LightSource,bs,::Beamsplitter,detect::Detector)
 
 Returns a dense vector containing the counts received by the detector for the given duration t and LightSource
 """
-function denseReadout(t::Number,source::LightSource,detect::Detector)
+function denseReadout(duration::Number,source::LightSource,bs::Beamsplitter,detect::Detector)
     field = eField(source)
-    return denseReadout(t,field,detect)
+    return denseReadout(duration,field,bs,detect)
 end
 
 """
-    denseReadout(t::Number,field::eField,detect::Detector)
+    denseReadout(t::Number,field::eField,bs::Beamsplitter,detect::Detector)
 
 Returns a dense vector containing the counts received by the detector for the given duration t and EM field
 """
-function denseReadout(t::Number,field::eField,detect::Detector)
+function denseReadout(t::Number,field::eField,bs::Beamsplitter,detect::Detector)
     nb = nbar(t,field.source)
     γint = γIntensity(nb,t,detect.resolution,field)
-    return denseReadout(γint,detect)
+    return denseReadout(γint,bs,detect)
 end
 
 """
-    denseReadout(γint:γIntensity,detect::Detector)
+    denseReadout(γint:γIntensity,bs::Beamsplitter,detect::Detector)
 
 Returns a dense vector containing the counts received by the detector for the given photon intensity time-series
 """
-function denseReadout(γint::γIntensity,detect::Detector)
-    rngvec = Poisson.(γint.γvec)
-    out = zeros(Int,length(γint))
+function denseReadout(γint::γIntensity,bs::Beamsplitter,detect::Detector)
+    beam1Dist = Poisson.(bs.t*γint.γvec)
+    beam2Dist = Poisson.(bs.r*γint.γvec)
+    beam1 = zeros(Int,length(γint))
+    beam2 = zeros(Int,length(γint))
     ideadtime = convert(Int,ceil(detect.deadtime/detect.resolution))
+
+    # counts for beam 1
     i = 1
-    while i ≤ length(γint)
-        ct = rand(rngvec[i])
+    while i ≤ length(beam1)
+        ct = rand(beam1Dist[i])
         if ct != 0
-            out[i] = ct
+            beam1[i] = ct
             i+=ideadtime
         end
         i+=1
     end
-    return out
+
+    # counts for beam 2
+    i = 1
+    while i ≤ length(beam2)
+        ct = rand(beam2Dist[i])
+        if ct != 0
+            beam2[i] = ct
+            i+=ideadtime
+        end
+        i+=1
+    end
+
+    return DenseReadout(beam1,beam2)
 end
 
 export denseReadout

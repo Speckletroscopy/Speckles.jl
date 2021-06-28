@@ -3,6 +3,7 @@ module Speckles
 using Reexport
 @reexport using JuliaDB
 @reexport using UUIDs
+@reexport using Dates
 @reexport using Logging
 @reexport using LaTeXStrings
 @reexport using Plots
@@ -16,99 +17,97 @@ using Reexport
 @reexport using CSV
 @reexport using FFTW
 
-
+# location where all results are stored
 results_directory = "results"
 
-include("Parameters.jl")
 include("CountGenerator.jl")
 include("Noise.jl")
 include("LightSource.jl")
 include("Detector.jl")
-include("SpecialFunctions.jl")
 include("FourierTransform.jl")
+include("Parameters.jl")
+include("SimulationFlow.jl")
+include("SpecialFunctions.jl")
 include("Strings.jl")
 include("FileSave.jl")
 
-
-#-------------------------------------------------------------------------------
-
-"""
-    DenseResults(beamData::IndexedTable, corrData::IndexedTable)
-
-Stores beam intensity and correlation data from Speckle simulation in a dense format.
-"""
-struct DenseResults
-    beamData::IndexedTable
-    corrData::IndexedTable
-end
+simdb = nothing
 
 #-------------------------------------------------------------------------------
 """
-    SparseResults(beamData::NDSparse, corrData::NDSparse)
+    function run(instance::SpeckleInstance)
 
-Stores beam intensity and correlation data from Speckle simulation in a sparse format.
+Calculates the photon counts and correlations for a single instance of frequencies and phases.
+Returns (SpeckleReadout,Correlation)
 """
-struct SparseResults
-    beamData::NDSparse
-    corrData::NDSparse
+function run(instance::SpeckleInstance)
+    # calculate the max index of the time integration window
+    nwindow = length(instance.γint)÷convert(Int, ceil(instance.params.duration/instance.params.window))
+
+    readout = denseReadout(instance.γint,instance.bs,instance.detect)
+    corr = correlate1d(readout,1,nwindow)
+    return readout,corr
 end
 
-struct SpeckleSim
-    source::LightSource
-    detect::Detector
-    bs::Beamsplitter
-    duration::Number
-    γint::γIntensity
-    params::SpeckleParams
-end
+"""
+    function run(params::SpeckleParams)
 
-function SpeckleSim(params::SpeckleParams)
-    source = LightSource(
-                         params.n,
-                         params.Em,
-                         params.νm,
-                         params.σ,
-                         params.fγ
-                        )
-    detect = Detector(
-                      params.deadtime,
-                      params.resolution,
-                      params.jitter,
-                      params.efficiency,
-                      params.darkcounts
-                     )
+Calculates the photon counts and correlations for the number of repeats designated in params.
+Returns a SpeckleSim object.
+"""
+function run(params::SpeckleParams)
+    id = uuid4()
+    dt = now()
     bs = Beamsplitter(1,1)
-    nb = nbar(params.duration,source)*bs.t
-    γint = γIntensity(nb,params.duration,detect.resolution,source)
+    readout = SpeckleReadout[]
+    corr = Correlation[]
+    sim = SpeckleSim(dt,id,params,bs,readout,corr)
 
-    return SpeckleSim(source,  detect, bs, params.duration, γint, params)
+    # make a directory to store results from this run
+    results_data = joinpath(resultsDir(),string(id),"data")
+    mkpath(results_data)
+    results_plots = joinpath(resultsDir(),string(id),"plots")
+    mkpath(results_plots)
+
+    # instantiate frequencies and phases
+    instance = SpeckleInstance(params)
+
+    for i = 1:params.repeat
+        # create photon counts and correlations
+        readout, corr = run(instance)
+        
+        push!(sim.readout,readout)
+        push!(sim.corr,corr)
+
+        # reinstantiate frequencies and phases if desired
+        if i != params.repeat && params.reinstance == true
+            instance = SpeckleInstance(params)
+        end
+    end
+    save(sim,results_data)
+    return sim
 end
 
-export SpeckleSim
-#-------------------------------------------------------------------------------
-function run(sim::SpeckleSim)
-    # id = uuid4()
-    # # caulcate the max index of the time integration window
-    # nwindow = length(sim.γint)÷convert(Int, ceil(sim.params.duration/sim.params.window))
-    
-    # # generate correlation times
-    # τ = sim.params.resolution*collect(0:(nwindow-1))
+function run(allparams::Dict; results_dir::String = results_directory)
+    if results_dir != results_directory
+        resultsDir(results_dir)
+    end
+    dbpath = joinpath(resultsDir(),"simdb.csv")
+    if isfile(dbpath)
+        global simdb = loadtable(dbpath)
 
-    # # create a 5 e-fold low cut in τ to get rid of the non-periodic part of g2
-    # τCutLow = sqrt(5)/sim.params.σ
-
-    # # index of τCutLow
-    # nτCutLow = convert(Int, ceil(τCutLow/sim.params.resolution))
-
-    # # get the frequencies of a Fourier transform over τ with the calculated cuts
-    # freqs = fftFreq(sim.params.resolution,τ,(nτCutLow,lastindex(τ)))
-
-    return "Hello, World!"
-
-
-
+    end
+    paramVec = SpeckleParamsVector(allparams)
+    simVec   = run.(paramVec)
+    simTbl = tabulate(simVec)
+    if simdb != nothing
+        global simdb = mergeall(simdb,simTbl)
+    else
+        simdb = simTbl
+    end
+    JuliaDB.save(simdb,dbpath)
+    return nothing
 end
 export run
-
 #-------------------------------------------------------------------------------
 end

@@ -1,3 +1,4 @@
+#-------------------------------------------------------------------------------
 """
     function resultsDir()
 
@@ -6,7 +7,19 @@ Returns the name of the directory where results are being stored
 function resultsDir()
     return results_directory
 end
+
+"""
+    function resultsDir(newdir::String)
+
+Sets the directory where results are stored to newdir
+"""
+function resultsDir(newdir::String)
+    global results_directory = newdir
+    return results_directory
+end
 export resultsDir
+
+#-------------------------------------------------------------------------------
 
 """
     plotsDir(name::String,dirname::String = "plots")
@@ -18,6 +31,8 @@ function plotsDir(name::String,dirname::String = "plots")
 end
 export plotsDir
 
+#-------------------------------------------------------------------------------
+
 """
     dataDir(name::String,dirname::String = "data")
 
@@ -28,6 +43,105 @@ function dataDir(name::String,dirname::String = "data")
 end
 export dataDir
 
+#-------------------------------------------------------------------------------
+"""
+    function mergeall(a::IndexedTable,b::IndexedTable)
+
+Merges tables a and b. Unmatched columns are filled in with missing values.
+"""
+function mergeall(a::IndexedTable,b::IndexedTable)
+    # make column names into sets for set operations
+    colseta = Set(colnames(a))
+    colsetb = Set(colnames(b))
+    allcols = union(colseta, colsetb)
+    commoncols = intersect(colseta,colsetb)
+    # return just the regular merge if all columns are shared
+    if commoncols == allcols
+        return merge(a,b)
+    end
+
+    # get column names not common between the tables
+    cols_anotb = setdiff(colseta,colsetb)
+    cols_bnota = setdiff(colsetb,colseta)
+
+    # merge parts of table with common columns
+    commona = select(a,Tuple(commoncols))
+    commonb = select(b,Tuple(commoncols))
+    commontbl = merge(commona,commonb)
+    # join uncommon columns into the table
+    if length(cols_anotb) > 0
+        onlya = select(a,(:id,cols_anotb...))
+        commontbl = join(commontbl,onlya; how=:outer)
+    end
+    if length(cols_bnota) > 0
+        onlyb = select(b,(:id,cols_bnota...))
+        commontbl = join(commontbl,onlyb; how=:outer)
+    end
+    return commontbl
+end
+
+#-------------------------------------------------------------------------------
+function tabulate(sim::SpeckleSim)
+    simDict = Dict{Symbol,AbstractVector}()
+    # iterate through fields in sim.params and expand arrays to individual columns
+    for key in fieldnames(typeof(sim.params))
+        if typeof(getfield(sim.params,key)) <: AbstractArray
+            keyStr = string(key)
+            for (i,val) in enumerate(getfield(sim.params,key))
+                iKeyStr = string(keyStr,i)
+                simDict[Symbol(iKeyStr)] = [val]
+            end
+        else
+            simDict[key] = [getfield(sim.params,key)]
+        end
+    end
+    simDict[:id]  = [sim.id]
+    simDict[:bst] = [sim.bs.t]
+    simDict[:bsr] = [sim.bs.r]
+    return table(simDict; pkey=:id)
+end
+
+function tabulate(simvec::Vector{T}) where {T<:SpeckleSim}
+    out = tabulate(simvec[1])
+    if length(simvec) == 1
+        return out
+    else
+        for i=2:length(simvec)
+            simtbl = tabulate(simvec[i])
+            out = mergeall(out,simtbl)
+        end
+    end
+    return out
+end
+export tabulate
+#-------------------------------------------------------------------------------
+
+function save(sim::SpeckleSim,path::String)
+    for i = 1:length(sim.readout)
+        
+        beamDict = Dict(:b1=>sim.readout[i].beam1, :b2=>sim.readout[i].beam2)
+        beamTbl  = table(beamDict)
+        beamName = string("counts",i,".csv")
+        beamPath = joinpath(path,beamName)
+        JuliaDB.save(beamTbl,beamPath)
+
+        corrDict = Dict{Symbol,Vector}()
+        if typeof(sim.corr[i]) <: CorrelationVector
+            corrDict[Symbol(sim.corr[i].n)] = sim.corr[i].data
+        else
+            for j=1:size(sim.corr[i].data)[2]
+                corrDict[Symbol(j)] = sim.corr[i].data[:,j]
+            end
+        end
+        corrTbl = table(corrDict)
+        corrName = string("correlation",i,".csv")
+        corrPath = joinpath(path,corrName)
+        JuliaDB.save(corrTbl,corrPath)
+    end
+    return nothing
+end
+
+#-------------------------------------------------------------------------------
 """
     γIntensityPlot(times::Array,γint::Array,prefix::String)
 
@@ -45,6 +159,7 @@ function γIntensityPlot(times::Array,γint::Array,prefix::String)
 end
 
 export γIntensityPlot
+#-------------------------------------------------------------------------------
 
 """
     γCountPlot(times::Array,γint::Array,prefix::String)
@@ -99,6 +214,7 @@ function γCorrTimePlot(timeDF::IndexedTable, params::Dict, prefix::String)
 end
 
 export γCorrTimePlot
+#-------------------------------------------------------------------------------
 
 """
     γCorrFreqPlot(freqVec::Vector, fftVec::Vector, params::Dict, prefix::String)
@@ -139,3 +255,4 @@ function γCorrFreqPlot(freqDF::IndexedTable, params::Dict, prefix::String)
 end
 
 export γCorrFreqPlot
+#-------------------------------------------------------------------------------

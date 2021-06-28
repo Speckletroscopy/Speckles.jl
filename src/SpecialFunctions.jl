@@ -1,6 +1,58 @@
 ################################################################################
 # Correlation Functions
 ################################################################################
+
+"""
+    function correlate2d(readout::DenseReadout, window::Int)
+
+Calculates the entire correlation matrix between beam 1 and 2
+"""
+function correlate2d(readout::DenseReadout, window::Int)
+    @assert window < length(readout.beam1) "Window must be smaller than length of beam vector"
+
+    mnMax = length(readout.beam1) - window
+    out = map(mn->correlate(readout,mn[1],mn[2],window), Iterators.product(1:mnMax,1:mnMax))
+    
+    return DenseCorrelationMatrix(out)
+end
+export correlate2d
+
+#-------------------------------------------------------------------------------
+
+"""
+    function correlate1d(readout::DenseReadout, n::Int, window::Int)
+
+Calculates the nth column of the correlation matrix between beam 1 and 2.
+"""
+function correlate1d(readout::DenseReadout, n::Int, window::Int)
+    @assert window < length(readout.beam1) "Window must be smaller than length of beam vector"
+
+    mMax = length(readout.beam1) - window
+    out = map(m->correlate(readout, m, n, window), 1:mMax)
+
+    return DenseCorrelationVector(n,out)
+end
+export correlate1d
+
+#-------------------------------------------------------------------------------
+
+"""
+    function correlate(readout::DenseReadout, m::Int, n::Int, window::Int)
+
+Calculates the mn-th element of the correlation matrix between beam 1 and 2.
+"""
+function correlate(readout::DenseReadout, m::Int, n::Int, window::Int)
+    @assert m <= length(readout.beam1) - window "m index out of bounds"
+    @assert n <= length(readout.beam1) - window "n index out of bounds"
+
+    v1 = view(readout.beam1,m:(m+window))
+    v2 = view(readout.beam2,n:(n+window))
+    
+    num = dot(v1,v2)/window
+    den = mean(v1)*mean(v2)
+    return num/den
+end
+
 """
 	function correlate(u::Vector{T},v::Vector{T},offset::Integer,window::Integer = -1) where {T<:Number}
 
@@ -26,6 +78,8 @@ end
 
 export correlate
 
+#-------------------------------------------------------------------------------
+
 """
 	function autocorrelate(u::Vector{T},offset::Integer, window::Integer = -1) where {T<:Number}
 
@@ -36,6 +90,8 @@ function autocorrelate(u::Vector{T},offset::Integer, window::Integer = -1) where
 end
 
 export autocorrelate
+
+#-------------------------------------------------------------------------------
 
 """
 	ncorrelate(u::Vector{T},v::Vector{T},offset::Integer,window::Integer = -1) where {T<:Number}
@@ -61,6 +117,9 @@ function ncorrelate(u::Vector{T},v::Vector{T},offset::Integer,window::Integer = 
 end
 
 export ncorrelate
+
+#-------------------------------------------------------------------------------
+
 """
     function corrTimes(τ::Vector,γCounts::Vector)
 
@@ -73,6 +132,8 @@ end
 
 export corrTimes
 
+#-------------------------------------------------------------------------------
+
 """
     function autocorrTimes(τ::Vector,γCounts::Vector)
 
@@ -83,6 +144,8 @@ function autocorrTimes(τ::Vector,γCounts::Vector)
 end
 
 export autocorrTimes
+
+#-------------------------------------------------------------------------------
 
 """
     γCoincidentτ(beam1::Vector{T}, beam2::Vector{T}) where {T<:Number}
@@ -108,6 +171,8 @@ function γCoincidentIndex(beam1::Vector{T}, beam2::Vector{T}) where {T<:Number}
 end
 
 export γCoincidentIndex
+
+#-------------------------------------------------------------------------------
 
 """
     firstNonzero(a::Vector)

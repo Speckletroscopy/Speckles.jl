@@ -8,7 +8,7 @@ function runsim()
     νHα2 = [456810,456813] #GHz
     paramDict = Dict(
                      :n    => [20],#,40,80],#,100,160], # number of atoms
-                    :νm   => [νHα1,νHα2], # line frequencies in GHz
+                    :νm   => [νHα2], # line frequencies in GHz
                     :Em   => ["ones"], # relative line magnitudes
                     :σ    => [20.0], # Doppler broadening in GHz
                     :fγ   => [2.0e6],#,"shot10%","shot50%",10.0,1.0,0.16], # mean photon count rate in GHz

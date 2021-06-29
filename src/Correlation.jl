@@ -1,4 +1,30 @@
 ################################################################################
+# Correlation Data Structures
+################################################################################
+
+abstract type Correlation end
+abstract type CorrelationVector <: Correlation end
+abstract type CorrelationMatrix <: Correlation end
+
+struct DenseCorrelationVector <: CorrelationVector
+    n::Int # column of correlation matrix
+    data::Vector
+end
+
+struct SparseCorrelationVector <: CorrelationVector
+    n::Int # column of correlation matrix
+    data::SparseVector
+end
+
+struct DenseCorrelationMatrix <: CorrelationMatrix
+    data::Matrix
+end
+
+struct SparseCorrelationMatrix <: CorrelationMatrix
+    data::SparseMatrixCSC
+end
+
+################################################################################
 # Correlation Functions
 ################################################################################
 

@@ -1,3 +1,29 @@
+################################################################################
+# Counts are generated at the detector, so photon count generating functions
+# should live here.
+################################################################################
+"""
+	function beCount(nbar::Real)
+
+Returns Bose-Einstein distributed counts for average count rate nbar
+"""
+function beCount(nbar::Real)
+	p = 1/(nbar+1)
+	f = p*nbar
+	s = p
+	r = rand()
+	count = 0
+	while r>s
+		count += 1
+		p *= f
+		s += p
+	end
+	return count
+end
+
+################################################################################
+# Container for detector properties
+################################################################################
 struct Detector
     deadtime::Float64
     resolution::Float64
@@ -50,7 +76,9 @@ end
 
 export Detector
 
-#-------------------------------------------------------------------------------
+################################################################################
+# Data structures for storing the readout of the detector
+################################################################################
 
 # define a type for both dense and sparse sim results
 abstract type SpeckleReadout end
@@ -89,6 +117,9 @@ struct SparseReadout <: SpeckleReadout
 end
 
 export SparseReadout
+
+################################################################################
+# Functions to generate counts from the detector
 ################################################################################
 """
     denseReadout(t::Number,source::LightSource,bs,::Beamsplitter,detect::Detector)

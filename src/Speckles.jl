@@ -16,18 +16,19 @@ using Reexport
 @reexport using IterTools
 @reexport using CSV
 @reexport using FFTW
+@reexport using DSP
+@reexport using Measurements
+using CatViews
 
 # location where all results are stored
 results_directory = "results"
 
-include("CountGenerator.jl")
-include("Noise.jl")
 include("LightSource.jl")
 include("Detector.jl")
-include("FourierTransform.jl")
 include("Parameters.jl")
+include("Correlation.jl")
 include("SimulationFlow.jl")
-include("SpecialFunctions.jl")
+include("Analysis.jl")
 include("Strings.jl")
 include("FileSave.jl")
 
@@ -58,6 +59,7 @@ Returns a SpeckleSim object.
 function run(params::SpeckleParams)
     id = uuid4()
     dt = now()
+    @info "Beginning run id:$id"
     bs = Beamsplitter(1,1)
     readout = SpeckleReadout[]
     corr = Correlation[]
@@ -84,29 +86,58 @@ function run(params::SpeckleParams)
             instance = SpeckleInstance(params)
         end
     end
-    save(sim,results_data)
+    save(sim)
     return sim
 end
 
+"""
+    function run(allparams::Dict; results_dir::String = results_directory)
+
+Run a series of simulations and store them to results_dir.
+
+- allparams is a dictionary with the same keys as SpeckleParams, but the
+    values are lists with each simulation parameter to be run
+"""
 function run(allparams::Dict; results_dir::String = results_directory)
+    # use the default name for the results directory if none is given
     if results_dir != results_directory
         resultsDir(results_dir)
     end
+
+    # set the simulation database file path and check for existence
     dbpath = joinpath(resultsDir(),"simdb.csv")
     if isfile(dbpath)
-        global simdb = loadtable(dbpath)
-
+        # load the simulation database file if it exists
+        global simdb = JuliaDB.load(dbpath)
+    else
+        # set it to nothing if it doesn't exists so we can make a new one later
+        global simdb = nothing
     end
+
+    # split up allparams into a vector of SpeckleParams
     paramVec = SpeckleParamsVector(allparams)
+
+    # run the simulation for each set of parameters
     simVec   = run.(paramVec)
+
+    # perform fourier transforms of all correlations
+    fftVec   = SpeckleFFT.(simVec)
+
+    snrVec = map(ft_par->snr(ft_par[1],ft_par[2]),zip(fftVec,paramVec))
+    # store the simulation results in a table
     simTbl = tabulate(simVec)
-    if simdb != nothing
+
+    # merge simulation results into database, if it exists
+    #   make a new one if it doesn't...
+    if simdb !== nothing
         global simdb = mergeall(simdb,simTbl)
     else
         simdb = simTbl
     end
+
+    # save the database to file and return the results
     JuliaDB.save(simdb,dbpath)
-    return nothing
+    return simdb
 end
 export run
 #-------------------------------------------------------------------------------

@@ -1,6 +1,9 @@
+################################################################################
+# File tree manipulation
+################################################################################
 #-------------------------------------------------------------------------------
 """
-    function resultsDir()
+    resultsDir()
 
 Returns the name of the directory where results are being stored
 """
@@ -9,7 +12,7 @@ function resultsDir()
 end
 
 """
-    function resultsDir(newdir::String)
+    resultsDir(newdir::String)
 
 Sets the directory where results are stored to newdir
 """
@@ -22,12 +25,12 @@ export resultsDir
 #-------------------------------------------------------------------------------
 
 """
-    plotsDir(name::String,dirname::String = "plots")
+    plotsDir(sim::SpeckleSim)
 
-Concatenates string with name of plots directory
+Returns the path to the plots directory for the input simulation
 """
-function plotsDir(name::String,dirname::String = "plots")
-    return joinpath(dirname,name)
+function plotsDir(sim::SpeckleSim)
+    return joinpath(resultsDir(),string(sim.id),"plots")
 end
 export plotsDir
 
@@ -38,14 +41,17 @@ export plotsDir
 
 Concatenates string with name of data directory
 """
-function dataDir(name::String,dirname::String = "data")
-    return joinpath(dirname,name)    
+function dataDir(sim::SpeckleSim)
+    return joinpath(resultsDir(),string(sim.id),"data")
 end
 export dataDir
 
 #-------------------------------------------------------------------------------
+################################################################################
+# Database management
+################################################################################
 """
-    function mergeall(a::IndexedTable,b::IndexedTable)
+    mergeall(a::IndexedTable,b::IndexedTable)
 
 Merges tables a and b. Unmatched columns are filled in with missing values.
 """
@@ -95,6 +101,7 @@ function tabulate(sim::SpeckleSim)
             simDict[key] = [getfield(sim.params,key)]
         end
     end
+    simDict[:dt]  = [sim.dt]
     simDict[:id]  = [sim.id]
     simDict[:bst] = [sim.bs.t]
     simDict[:bsr] = [sim.bs.r]
@@ -116,13 +123,16 @@ end
 export tabulate
 #-------------------------------------------------------------------------------
 
-function save(sim::SpeckleSim,path::String)
+################################################################################
+# Save functions
+################################################################################
+function save(sim::SpeckleSim)
     for i = 1:length(sim.readout)
         
         beamDict = Dict(:b1=>sim.readout[i].beam1, :b2=>sim.readout[i].beam2)
         beamTbl  = table(beamDict)
         beamName = string("counts",i,".csv")
-        beamPath = joinpath(path,beamName)
+        beamPath = joinpath(dataDir(sim),beamName)
         JuliaDB.save(beamTbl,beamPath)
 
         corrDict = Dict{Symbol,Vector}()
@@ -135,12 +145,19 @@ function save(sim::SpeckleSim,path::String)
         end
         corrTbl = table(corrDict)
         corrName = string("correlation",i,".csv")
-        corrPath = joinpath(path,corrName)
+        corrPath = joinpath(dataDir(sim),corrName)
         JuliaDB.save(corrTbl,corrPath)
     end
+    @info "Saved data for simulation id: $(sim.id)"
     return nothing
 end
 
+#-------------------------------------------------------------------------------
+function save(plt::Plots.Plot,name::String,sim::SpeckleSim)
+    figPath = joinpath(plotsDir(sim),name)
+    savefig(plt,figPath)
+    @info "Saved $name in $(plotsDir(sim))"
+end
 #-------------------------------------------------------------------------------
 """
     γIntensityPlot(times::Array,γint::Array,prefix::String)

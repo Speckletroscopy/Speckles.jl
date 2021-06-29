@@ -315,6 +315,35 @@ end
 
 export stau
 
+function Δm(params::SpeckleParams)
+    return params.νm .- mean(params.νm)
+end
+
+"""
+    g2Calc(τ::Number,params::SpeckleParams)
+
+Returns the average calculated value of g2(τ) from MGST2021.
+"""
+function g2Calc(τ::Number,params::SpeckleParams)
+    n = params.n
+    em2 = real.(params.Em .* conj.(params.Em))
+    em4 = em2 .* em2
+    sumEm2 = sum(em2)
+    sumEm4 = sum(em4)
+
+    g2τ = 1.0
+
+    term2 = -sumEm4/(n*sumEm2^2)
+
+    g2τ += term2
+
+    term3 = sum(em2 .* exp.(-im*τ*Δm(params)))/sumEm2
+    term3 *= conj(term3)
+    term3 = real(term3)
+    term3 *= stauAvg(τ,params)/n^2
+
+    return g2τ+term3
+end
 """
     g2Calc(τ::Number,n::Integer,source::LightSource)
 

@@ -5,7 +5,7 @@ function runsim()
 
     
     νHα1 = [456813] #GHz
-    νHα2 = [456810,456813] #GHz
+    νHα2 = [456810,456813,456815] #GHz
     paramDict = Dict(
                      :n    => [20],#,40,80],#,100,160], # number of atoms
                     :νm   => [νHα2], # line frequencies in GHz

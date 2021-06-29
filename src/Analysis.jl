@@ -6,7 +6,7 @@
 
 Returns (frequencies, coefficients) for positive frequencies of the fourier transform
 """
-function fftPositiveFreq(ft::AbstractVector{T},f::AbstractVector{T}) where {T<:Real}
+function fftPositiveFreq(f::AbstractVector{T},ft::AbstractVector{T}) where {T<:Real}
 	@assert length(ft) == length(f) "Fourier transform and frequency vectors much have matching length"
 	ftRange = f .>= 0
 	return (f[ftRange],ft[ftRange])
@@ -63,6 +63,7 @@ end
 export niceFFT
 
 struct SpeckleFFT{V<:Vector}
+    id::UUID
     freqs::Vector
     singles::Vector{V}
     sumFFT::Vector
@@ -74,7 +75,7 @@ function SpeckleFFT(sim::SpeckleSim{U,V}) where {U<:SpeckleReadout,V<:Correlatio
     corrSum = +(getproperty.(sim.corr,:data)...)
     freqs,corrSumFFT = niceFFT(corrSum,sim.params)
 
-    return SpeckleFFT(freqs,corrFFTvec,corrSumFFT,sumCorrFFT)
+    return SpeckleFFT(sim.id,freqs,corrFFTvec,corrSumFFT,sumCorrFFT)
 end
 export SpeckleFFT
 ################################################################################
@@ -88,26 +89,30 @@ end
 # Analysis functions
 ################################################################################
 
-function snr(ft::Vector,shifts::Vector,ishifts::Vector)
-            # slice out the peaks and put the noise in a single view
-            noiseviews = map(slice->view(ft,UnitRange(slice[1],slice[2])),ishifts)
-            noiseviews = CatView(noiseviews...)
-            # noise statistics
-            μ = mean(noiseviews)
-            σ = std(noiseviews)
-            # select the max value in each peak window as the peak height
-            peaks = Float64[]
-            for k=1:length(shifts)
-                peakview = view(ft,UnitRange(ishifts[k][2],ishifts[k+1][1]))
-                peakval = max(peakview...)
-                push!(peaks,peakval)
-            end
-            # subtract the mean value of the noise from the peak height
-            peaks = peaks .- μ
-            # calculate snr
-            peaks = peaks/σ
-            # zip together shifts and snrs for reference
-            return collect(zip(shifts,peaks))
+function snr(ft::Vector{T},ishifts::Vector{U},sym::Vector{V}) where {T<:Number,U<:Tuple,V<:Symbol}
+    @assert length(ishifts) == length(sym)+1 "Slicing went wrong!"
+    
+    # slice out the peaks and put the noise in a single view
+    noiseviews = map(slice->view(ft,UnitRange(slice[1],slice[2])),ishifts)
+    noiseviews = CatView(noiseviews...)
+    # noise statistics
+    μ = mean(noiseviews)
+    σ = std(noiseviews)
+    # select the max value in each peak window as the peak height
+    peaks = Float64[]
+    for k=1:length(sym)
+        peakview = view(ft,UnitRange(ishifts[k][2],ishifts[k+1][1]))
+        peakval = max(peakview...)
+        push!(peaks,peakval)
+    end
+    # subtract the mean value of the noise from the peak height
+    peaks = peaks .- μ
+    # calculate snr
+    peaks = peaks/σ
+    # we don't have a theoretical value for the peak height, so take snr=1 if fluctuations are larger than the signal
+    peaks = map(peak-> peak < 1 ? 1 : peak,peaks)
+    # zip together shifts and snrs for reference
+    return collect(zip(sym,peaks))
 end
 
 """
@@ -121,10 +126,17 @@ function snr(sfft::SpeckleFFT,params::SpeckleParams)
         halfwindow = 2
         # find frequency shifts
         shifts = map(x->abs(x[2]-x[1]),subsets(params.νm,2))
+        shifts = sort(shifts)
+       
+        # creat a dictionary to hold everything
+        shiftSym = Symbol.(shifts)
+        snrDict = Dict{Symbol,Union{Vector{String},Vector{Float64}}}()
+        for symbol in shiftSym
+            snrDict[symbol] = Float64[]
+        end
+        snrDict[:type] = String[]
 
         # find fft indices where frequency shifts are supposed to be
-        shifts = sort(shifts)
-        # shiftSym = Symbol.(shifts)
         ishifts = Tuple{Int64,Int64}[]
         i = 1
         istart = i
@@ -156,12 +168,28 @@ function snr(sfft::SpeckleFFT,params::SpeckleParams)
         push!(ishifts,(istart,length(sfft.freqs)))
         @assert length(ishifts) == length(shifts)+1 "Slicing went wrong!"
         
-        # do the singles first
-        singleSnr = map(single->snr(single,shifts,ishifts),sfft.singles)
-        sumFFTsnr = snr(sfft.sumFFT,shifts,ishifts)
-        FFTsumSnr = snr(sfft.FFTsum,shifts,ishifts)
+        # calculate the snr for each fourier transform
+        # collect results in a single dictionary
+        singleSnr = map(single->snr(single,ishifts,shiftSym),sfft.singles)
+        for snrVec in singleSnr
+            push!(snrDict[:type],"single")
+            for (name,val) in snrVec
+                push!(snrDict[name],val)
+            end
+        end
+        sumFFTsnr = snr(sfft.sumFFT,ishifts,shiftSym)
+        push!(snrDict[:type],"sumFFT")
+        for (name,val) in sumFFTsnr
+            push!(snrDict[name],val)
+        end
+        FFTsumSnr = snr(sfft.FFTsum,ishifts,shiftSym)
+        push!(snrDict[:type],"FFTsum")
+        for (name,val) in FFTsumSnr 
+            push!(snrDict[name],val)
+        end
 
-        return singleSnr,sumFFTsnr,FFTsumSnr
+        # convert dictionary to table and return
+        return table(snrDict)
 
     else
         return nothing

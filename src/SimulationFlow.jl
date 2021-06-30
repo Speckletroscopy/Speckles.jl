@@ -9,6 +9,10 @@ struct SpeckleSim{U<:SpeckleReadout,V<:Correlation}
     corr::Vector{V}
 end
 
+function Base.length(sim::SpeckleSim)
+    return length(sim.readout)
+end
+
 #-------------------------------------------------------------------------------
 # this is what enters the simulation for each "run"
 struct SpeckleInstance

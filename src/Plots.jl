@@ -71,18 +71,26 @@ function γCorrTimePlot(timeDF::IndexedTable, params::Dict, prefix::String)
     return out
 end
 
-function γCorrTimePlot(corr::Correlation,params::SpeckleParams)
-    times = collect(0:(length(corr.data)-1))*params.resolution
-    out = plot(times,corr.data,label="simulation")
-    plot!(out,times,g2Calc.(times),label = "calculated")
+function γCorrTimePlot(corr::Vector{T},params::SpeckleParams) where {T<:Number}
+    times = collect(0:(length(corr)-1))*params.resolution
+    out = plot(times,corr,label="simulation")
+    plot!(out,times,map(time->g2Calc(time,params),times),label = "calculated")
     xlabel!(L"\tau \textrm{ (ns)}")
 	ylabel!("\$g^{(2)}(\\tau)\$")
     title!("Photon Correlations vs Time Offset")
     return out
 end
 
-function γCorrTimePlot(sim::SpeckleSim; ind::Union{String,Int} = "all")
-    @assert false "Pick up here"
+function γCorrTimePlot(sim::SpeckleSim; ind::Union{String,Int} = "avg")
+    if ind isa Int
+        @assert 0 < ind < length(sim) "Index out of bounds"
+        return γCorrTimePlot(sim.corr[ind].data,sim.params)
+    elseif ind == "avg"
+        cavg = +(sim.corr...)
+        return γCorrTimePlot(cavg.data/length(sim.corr),sim.params)
+
+    end
+    @assert false "Invalid ind in γCorrTimePlot"
 end
 
 export γCorrTimePlot

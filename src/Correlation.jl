@@ -24,6 +24,25 @@ struct SparseCorrelationMatrix <: CorrelationMatrix
     data::SparseMatrixCSC
 end
 
+function Base.:+(x::T...) where {T<:Correlation}
+    if length(x) == 1
+        return x[1]
+    end
+    newdata = x[1].data
+    for corr in x[2:end]
+        newdata += corr.data
+    end
+    if T<:CorrelationVector
+        icheck = true
+        for corr in x[2:end]
+            icheck *= x[1].n == corr.n
+        end
+        newn = icheck ? x[1].n : -1
+        return typeof(x[1])(newn,newdata)
+    else
+        return typeof(x[1])(newdata)
+    end
+end
 ################################################################################
 # Correlation Functions
 ################################################################################
@@ -250,6 +269,9 @@ function stauAvg(τ::Number,source::LightSource)
     return stauAvg(τ,source.σ,source.n)
 end
 
+function stauAvg(τ::Number,params::SpeckleParams)
+    return stauAvg(τ,params.σ,params.n)
+end
 """
     stauAvg(τ::Number,σ::Number,n::Integer)
 
@@ -337,7 +359,7 @@ function g2Calc(τ::Number,params::SpeckleParams)
 
     g2τ += term2
 
-    term3 = sum(em2 .* exp.(-im*τ*Δm(params)))/sumEm2
+    term3 = sum(em2 .* exp.(-im*2*π*τ*Δm(params)))/sumEm2
     term3 *= conj(term3)
     term3 = real(term3)
     term3 *= stauAvg(τ,params)/n^2
@@ -362,7 +384,7 @@ function g2Calc(τ::Number,source::LightSource)
 
     g2τ += term2
 
-    term3 = sum(em2 .* exp.(-im*τ*Δm(source)))/sumEm2
+    term3 = sum(em2 .* exp.(-im*2*π*τ*Δm(source)))/sumEm2
     term3 *= conj(term3)
     term3 = real(term3)
     term3 *= stauAvg(τ,source)/n^2

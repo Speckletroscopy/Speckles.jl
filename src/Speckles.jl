@@ -121,7 +121,8 @@ function run(allparams::Dict; results_dir::String = results_directory)
     # run the simulation for each set of parameters
     simVec   = run.(paramVec)
 
-    γCorrTimePlot(simVec[1])
+    plt = γCorrTimePlot(simVec[1])
+    savefig(plt,"~/test.png")
     # perform fourier transforms of all correlations
     fftVec   = SpeckleFFT.(simVec)
     snrVec = map(ft_par->snr(ft_par[1],ft_par[2]),zip(fftVec,paramVec))

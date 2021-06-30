@@ -119,13 +119,7 @@ function run(allparams::Dict; results_dir::String = results_directory)
     paramVec = SpeckleParamsVector(allparams)
 
     # run the simulation for each set of parameters
-    simVec   = run.(paramVec)
-
-    plt = γCorrTimePlot(simVec[1])
-    savefig(plt,"~/test.png")
-    # perform fourier transforms of all correlations
-    fftVec   = SpeckleFFT.(simVec)
-    snrVec = map(ft_par->snr(ft_par[1],ft_par[2]),zip(fftVec,paramVec))
+    simVec= run.(paramVec)
 
     # store the simulation results in a table
     simTbl = tabulate(simVec)
@@ -137,6 +131,55 @@ function run(allparams::Dict; results_dir::String = results_directory)
     else
         simdb = simTbl
     end
+
+    # *** ANALYSIS *** #
+    # take fourier transform of correlations
+    fftVec = SpeckleFFT.(simVec)
+
+    # calculate snr
+    snrVec = map(ft_par->snr(ft_par[1],ft_par[2]),zip(fftVec,paramVec))
+
+    # function to summarize results of snr calculations in the simdb table
+    function makeSnrDbEntry(t::IndexedTable,id::UUID)
+        snrDict = Dict{Symbol,AbstractVector}()
+        for col in colnames(t)
+            if col == :type continue end
+            if length(select(t,col))>1
+                val = [mean(select(t,col))±std(select(t,col))]
+            else
+                val = select(t,col)
+            end
+            tname = select(t,:type)[1]
+            nameStr = string("SNR_",tname,"Δ",col)
+            nameSym = Symbol(nameStr)
+            snrDict[nameSym] = val
+        end
+        snrDict[:id] = [id]
+        out = table(snrDict,pkey=:id)
+        @assert length(out) == 1 "Something went wrong"
+        return out
+    end
+
+    allSnrEntries = nothing
+    # TODO: make this more efficient
+    for (i,snrTbl) in enumerate(snrVec)
+        singleTbl = filter(t->t.type == "single",snrTbl)
+        sumFFTtbl = filter(t->t.type == "sumFFT",snrTbl)
+        FFTsumTbl = filter(t->t.type == "FFTsum",snrTbl)
+        singleEntry = makeSnrDbEntry(singleTbl,simVec[i].id)
+        sumFFTentry = makeSnrDbEntry(sumFFTtbl,simVec[i].id)
+        FFTsumEntry = makeSnrDbEntry(FFTsumTbl,simVec[i].id)
+
+        snrEntry = join(sumFFTentry,FFTsumEntry,how=:inner)
+        snrEntry = join(singleEntry,snrEntry,how=:inner)
+        if allSnrEntries === nothing
+            allSnrEntries = snrEntry
+        else
+            allSnrEntries = mergeall(allSnrEntries,snrEntry)
+        end
+    end
+
+    simdb = mergeall(simdb,allSnrEntries)
 
     # save the database to file and return the results
     JuliaDB.save(simdb,dbpath)

@@ -34,7 +34,25 @@ include("Plots.jl")
 include("FileSave.jl")
 
 simdb = nothing
+#-------------------------------------------------------------------------------
+function load_db(;results_dir::String = results_directory)
+    # use the default name for the results directory if none is given
+    if results_dir != results_directory
+        resultsDir(results_dir)
+    end
 
+    # set the simulation database file path and check for existence
+    dbpath = joinpath(resultsDir(),"simdb.csv")
+    if isfile(dbpath)
+        # load the simulation database file if it exists
+        global simdb = JuliaDB.load(dbpath)
+    else
+        # set it to nothing if it doesn't exists so we can make a new one later
+        global simdb = nothing
+    end
+    return dbpath
+end
+export load_db
 #-------------------------------------------------------------------------------
 """
     function run(instance::SpeckleInstance)
@@ -64,30 +82,38 @@ function run(params::SpeckleParams)
     bs = Beamsplitter(1,1)
     readout = SpeckleReadout[]
     corr = Correlation[]
-    sim = SpeckleSim(dt,id,params,bs,readout,corr)
 
+    simtime = @elapsed begin
+        # instantiate frequencies and phases
+        instance = SpeckleInstance(params)
+
+        for i = 1:params.repeat
+            # create photon counts and correlations
+            ireadout, icorr = run(instance)
+
+            push!(readout,ireadout)
+            push!(corr,icorr)
+
+            # reinstantiate frequencies and phases if desired
+            if params.reinstance == true && i < params.repeat
+                instance = SpeckleInstance(params)
+            end
+        end
+    end
+    sim = SpeckleSim(dt,id,params,bs,simtime,readout,corr)
+    @info "Run $id took $simtime seconds"
+
+    # *** SAVE RESULTS TO DATABASE ***
     # make a directory to store results from this run
     results_data = joinpath(resultsDir(),string(id),"data")
     mkpath(results_data)
     results_plots = joinpath(resultsDir(),string(id),"plots")
     mkpath(results_plots)
-
-    # instantiate frequencies and phases
-    instance = SpeckleInstance(params)
-
-    for i = 1:params.repeat
-        # create photon counts and correlations
-        readout, corr = run(instance)
-        
-        push!(sim.readout,readout)
-        push!(sim.corr,corr)
-
-        # reinstantiate frequencies and phases if desired
-        if i != params.repeat && params.reinstance == true
-            instance = SpeckleInstance(params)
-        end
-    end
     save(sim)
+
+    @info "Saved $id to $(resultsDir())"
+
+    # return results
     return sim
 end
 
@@ -100,21 +126,7 @@ Run a series of simulations and store them to results_dir.
     values are lists with each simulation parameter to be run
 """
 function run(allparams::Dict; results_dir::String = results_directory)
-    # use the default name for the results directory if none is given
-    if results_dir != results_directory
-        resultsDir(results_dir)
-    end
-
-    # set the simulation database file path and check for existence
-    dbpath = joinpath(resultsDir(),"simdb.csv")
-    if isfile(dbpath)
-        # load the simulation database file if it exists
-        global simdb = JuliaDB.load(dbpath)
-    else
-        # set it to nothing if it doesn't exists so we can make a new one later
-        global simdb = nothing
-    end
-
+    dbpath = load_db(results_dir = results_dir)
     # split up allparams into a vector of SpeckleParams
     paramVec = SpeckleParamsVector(allparams)
 
@@ -124,13 +136,12 @@ function run(allparams::Dict; results_dir::String = results_directory)
     # store the simulation results in a table
     simTbl = tabulate(simVec)
 
-    # merge simulation results into database, if it exists
-    #   make a new one if it doesn't...
-    if simdb !== nothing
-        global simdb = mergeall(simdb,simTbl)
-    else
-        simdb = simTbl
-    end
+    # create and add an id for the whole run series
+    runid = uuid4()
+
+    # add a column with the id to the table
+    runidvec = fill(runid,length(simTbl))
+    simTbl = insertcolsbefore(simTbl,:id,:runid=>runidvec)
 
     # *** ANALYSIS *** #
     # take fourier transform of correlations
@@ -179,12 +190,32 @@ function run(allparams::Dict; results_dir::String = results_directory)
         end
     end
 
-    simdb = mergeall(simdb,allSnrEntries)
+    simTbl = join(simTbl,allSnrEntries,how=:inner)
+
+    # merge simulation results into database, if it exists
+    #   make a new one if it doesn't...
+    if simdb !== nothing
+        global simdb = mergeall(simdb,simTbl)
+    else
+        simdb = simTbl
+    end
 
     # save the database to file and return the results
     JuliaDB.save(simdb,dbpath)
-    return simdb
+    return simTbl
 end
 export run
+
+"""
+    get_simdb()
+
+Returns the summary database of all stored simulations
+"""
+function get_simdb()
+    if simdb === nothing
+        return table()
+    end
+    return JuliaDB.load(simdb)
+end
 #-------------------------------------------------------------------------------
 end

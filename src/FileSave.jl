@@ -116,6 +116,7 @@ function tabulate(sim::SpeckleSim)
     simDict[:id]  = [sim.id]
     simDict[:bst] = [sim.bs.t]
     simDict[:bsr] = [sim.bs.r]
+    simDict[:elapsed] = [sim.elapsed]
     return table(simDict; pkey=:id)
 end
 

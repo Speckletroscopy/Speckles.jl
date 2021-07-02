@@ -5,6 +5,7 @@ struct SpeckleSim{U<:SpeckleReadout,V<:Correlation}
     id::UUID
     params::SpeckleParams
     bs::Beamsplitter
+    elapsed::Float64
     readout::Vector{U}
     corr::Vector{V}
 end

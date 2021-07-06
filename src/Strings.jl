@@ -34,7 +34,7 @@ Returns a markdown table with given parameters
 """
 function paramTable(params::Dict,names::Dict = Dict())
     out = "| Description | Value(s) |\n|:---:|:---:|\n"
-    for (key,value) in names
+    for (key,value) in names 
         @assert key in keys(params) "Key $key not found in parameters"
         pval = params[key]
         if length(pval) == 1

@@ -1,6 +1,6 @@
 νHα2 = [456810,456813] #GHz
 paramDict = Dict(
-                 :n    => [10,20,30,40,50,60,70,80,90,100,200,500,800,1000], # number of atoms
+                :n    => [100], # number of atoms
                 :νm   => [νHα2], # line frequencies in GHz
                 :Em   => ["ones"], # relative line magnitudes
                 :σ    => [20.0], # Doppler broadening in GHz
@@ -10,12 +10,11 @@ paramDict = Dict(
                 :jitter     => [0.015], # detector timing jitter in nanoseconds 
                 :efficiency => [0.9], # detector efficiency
                 :darkcounts => [1.0e-8], # detector dark count rate in GHz
-                :duration   => [20.0], # duration of each correlation measurement in nanoseconds
+                :duration   => collect(5.0:5.0:100.0), # duration of each correlation measurement in nanoseconds
                 :window     => ["halfwindow"], # time over which to average correlations in nanoseconds
                 :repeat     => [100], # number of times to repeat correlation measurement
                 :reinstance => [true] # control whether or not frequencies and phases should be reinstanced between measurements
                 )
-
 nameDict = Dict(
                 :n    => "number of atoms",
                 :νm   => "line frequencies (GHz)",

@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.141592653-2.6-0.999993 (TeX Live 2021) (preloaded format=xelatex 2021.4.5)  6 JUL 2021 11:22
+This is XeTeX, Version 3.141592653-2.6-0.999993 (TeX Live 2021) (preloaded format=xelatex 2021.4.5)  6 JUL 2021 14:01
 entering extended mode
  \write18 enabled.
  %&-line parsing enabled.
@@ -494,7 +494,7 @@ LaTeX Info: Redefining \nameref on input line 120.
 
 \c@lstlisting=\count294
 LaTeX Font Info:    Trying to load font information for OT1+lmr on input line 1
-31.
+33.
 
 (/usr/local/texlive/2021/texmf-dist/tex/latex/lm/ot1lmr.fd
 File: ot1lmr.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
@@ -504,30 +504,30 @@ Package microtype Info: Loading generic protrusion settings for font family
 (microtype)             For optimal results, create family-specific settings.
 (microtype)             See the microtype manual for details.
 LaTeX Font Info:    Trying to load font information for OML+lmm on input line 1
-31.
+33.
 
 (/usr/local/texlive/2021/texmf-dist/tex/latex/lm/omllmm.fd
 File: omllmm.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 )
 LaTeX Font Info:    Trying to load font information for OMS+lmsy on input line 
-131.
+133.
 
 (/usr/local/texlive/2021/texmf-dist/tex/latex/lm/omslmsy.fd
 File: omslmsy.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 )
 LaTeX Font Info:    Trying to load font information for OMX+lmex on input line 
-131.
+133.
 
 (/usr/local/texlive/2021/texmf-dist/tex/latex/lm/omxlmex.fd
 File: omxlmex.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 )
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <12> on input line 131.
+(Font)              <12> on input line 133.
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <8> on input line 131.
+(Font)              <8> on input line 133.
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <6> on input line 131.
-LaTeX Font Info:    Trying to load font information for U+msa on input line 131
+(Font)              <6> on input line 133.
+LaTeX Font Info:    Trying to load font information for U+msa on input line 133
 .
 
 (/usr/local/texlive/2021/texmf-dist/tex/latex/amsfonts/umsa.fd
@@ -536,7 +536,7 @@ File: umsa.fd 2013/01/14 v3.01 AMS symbols A
 (/usr/local/texlive/2021/texmf-dist/tex/latex/microtype/mt-msa.cfg
 File: mt-msa.cfg 2006/02/04 v1.1 microtype config. file: AMS symbols (a) (RS)
 )
-LaTeX Font Info:    Trying to load font information for U+msb on input line 131
+LaTeX Font Info:    Trying to load font information for U+msb on input line 133
 .
 
 (/usr/local/texlive/2021/texmf-dist/tex/latex/amsfonts/umsb.fd
@@ -545,24 +545,54 @@ File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 (/usr/local/texlive/2021/texmf-dist/tex/latex/microtype/mt-msb.cfg
 File: mt-msb.cfg 2005/06/01 v1.0 microtype config. file: AMS symbols (b) (RS)
 )
-File: jl_6YzOV3/simnb_3_1.pdf Graphic file (type pdf)
-<use jl_6YzOV3/simnb_3_1.pdf>
-File: jl_6YzOV3/simnb_4_1.pdf Graphic file (type pdf)
-<use jl_6YzOV3/simnb_4_1.pdf>
- [1
+Overfull \hbox (14.28566pt too wide) in paragraph at lines 133--146
+[] 
+ []
+
+File: jl_PKMVtA/simnb_3_1.pdf Graphic file (type pdf)
+<use jl_PKMVtA/simnb_3_1.pdf>
+[1
 
 ]
-[2] (./simnb.aux)
+File: jl_PKMVtA/simnb_4_1.pdf Graphic file (type pdf)
+<use jl_PKMVtA/simnb_4_1.pdf>
+ [2]
+File: jl_PKMVtA/simnb_6_1.pdf Graphic file (type pdf)
+<use jl_PKMVtA/simnb_6_1.pdf>
+File: jl_PKMVtA/simnb_7_1.pdf Graphic file (type pdf)
+<use jl_PKMVtA/simnb_7_1.pdf>
+ [3]
+File: jl_PKMVtA/simnb_9_1.pdf Graphic file (type pdf)
+<use jl_PKMVtA/simnb_9_1.pdf>
+ [4]
+File: jl_PKMVtA/simnb_10_1.pdf Graphic file (type pdf)
+<use jl_PKMVtA/simnb_10_1.pdf>
+ [5]
+Overfull \hbox (275.50163pt too wide) in paragraph at lines 204--217
+[] 
+ []
+
+File: jl_PKMVtA/simnb_12_1.pdf Graphic file (type pdf)
+<use jl_PKMVtA/simnb_12_1.pdf>
+File: jl_PKMVtA/simnb_13_1.pdf Graphic file (type pdf)
+<use jl_PKMVtA/simnb_13_1.pdf>
+[6]
+File: jl_PKMVtA/simnb_15_1.pdf Graphic file (type pdf)
+<use jl_PKMVtA/simnb_15_1.pdf>
+ [7]
+File: jl_PKMVtA/simnb_16_1.pdf Graphic file (type pdf)
+<use jl_PKMVtA/simnb_16_1.pdf>
+ [8] (./simnb.aux)
 Package rerunfilecheck Info: File `simnb.out' has not changed.
-(rerunfilecheck)             Checksum: 253FED860DEAA7816D41A8840C493A31;329.
+(rerunfilecheck)             Checksum: 2011FAFCB264FB9A39E3D91B16B9A020;2037.
  ) 
 Here is how much of TeX's memory you used:
- 12392 strings out of 476919
- 186272 string characters out of 5821841
- 526835 words of memory out of 5000000
- 32192 multiletter control sequences out of 15000+600000
- 426876 words of font info for 56 fonts, out of 8000000 for 9000
+ 12452 strings out of 476919
+ 187767 string characters out of 5821841
+ 528775 words of memory out of 5000000
+ 32242 multiletter control sequences out of 15000+600000
+ 426892 words of font info for 58 fonts, out of 8000000 for 9000
  1348 hyphenation exceptions out of 8191
- 71i,6n,77p,438b,331s stack positions out of 5000i,500n,10000p,200000b,80000s
+ 71i,6n,77p,438b,335s stack positions out of 5000i,500n,10000p,200000b,80000s
 
-Output written on simnb.pdf (2 pages).
+Output written on simnb.pdf (8 pages).

@@ -1,42 +1,281 @@
 ```julia; echo = false;
 using Speckles
 ```
-# Signal to Noise Ratio
+# Statistics and Benchmarks
+## Signal to Noise Ratio
 
 The signal-to-noise ratio calculated in the simulation is a rough estimate. Since the peaks in the Fourier transform seem to be consistently narrow, an arbitrary window is chosen to separate the signal peak from the noise. Signal-to-noise is then calculated by taking the maximum inside each peak window, shifting it downwards by the mean of the noise part, then dividing the resulting value by the variance of the noise part.
 
 # Number of Emitting Atoms
 
-
 ```julia; echo = false; 
 include("templates/vary_n.jl")
 nameTable = paramTable(paramDict,nameDict)
-nrunTable = Speckles.run(paramDict);
+runTable = Speckles.run(paramDict);
 ```
+## Parameters
 
 `j println(nameTable)`
 
-
+## Plots
 ```julia; echo = false;
 # sort by n
-ntable = sort(nrunTable,:n)
-ncol = select(ntable,:n)
+ptable = sort(runTable,:n)
+pcol = select(ptable,:n)
 singlecol = nothing
-for name in colnames(ntable)
+sumFFTcol = nothing
+FFTsumCol = nothing
+for name in colnames(ptable)
     if occursin("single", string(name))
         global singlecol = name
     end
+    if occursin("sumFFT", string(name))
+        global sumFFTcol = name
+    end
+    if occursin("FFTsum", string(name))
+        global FFTsumCol = name
+    end
 end
 @assert singlecol !== nothing "Single SN column does not exist"
-sncol = select(ntable,singlecol)
-plot(ncol,sncol)
-plot!(xlabel = "Number of Emitting Atoms")
-plot!(ylabel = "Signal-to-Noise")
-plot!(title = "S/N vs Number of Emitting Atoms ($(paramDict[:repeat][1]) trials)")
+singlesn = select(ptable,singlecol)
+sumFFTsn = select(ptable,sumFFTcol)
+FFTsumsn = select(ptable,FFTsumCol)
+plot(pcol,singlesn,
+    label = "Single Measurement",
+    xlabel = "Number of Emitting Atoms",
+    ylabel = "Signal-to-Noise",
+    title = "S/N vs Number of Emitting Atoms ($(paramDict[:repeat][1]) trials)"
+    )
+plot!(pcol,sumFFTsn,label = "Sum of FT")
+plot!(pcol,FFTsumsn,label = "FT of Sum")
 ```
 
 ```julia; echo = false;
-tcol = select(ntable,:elapsed)
-plot(ncol,tcol)
+tcol = select(ptable,:elapsed)
+plot(pcol,tcol,
+    leg = false,
+    xlabel = "Number of Emitting Atoms",
+    ylabel = "Time Elapsed (seconds)",
+    title = "Simulation Time vs Number of Emitting Atoms"
+    )
+```
+
+# Average Photon Count Rate
+
+```julia; echo = false; 
+include("templates/vary_count-rate.jl")
+nameTable = paramTable(paramDict,nameDict)
+runTable = Speckles.run(paramDict);
+```
+## Parameters
+
+`j println(nameTable)`
+
+## Plots
+```julia; echo = false;
+# sort by fγ
+ptable = sort(runTable,:fγ)
+pcol = select(ptable,:fγ)
+singlecol = nothing
+sumFFTcol = nothing
+FFTsumCol = nothing
+for name in colnames(ptable)
+    if occursin("single", string(name))
+        global singlecol = name
+    end
+    if occursin("sumFFT", string(name))
+        global sumFFTcol = name
+    end
+    if occursin("FFTsum", string(name))
+        global FFTsumCol = name
+    end
+end
+@assert singlecol !== nothing "Single SN column does not exist"
+singlesn = select(ptable,singlecol)
+sumFFTsn = select(ptable,sumFFTcol)
+FFTsumsn = select(ptable,FFTsumCol)
+plot(pcol,singlesn,
+    xaxis = :log,
+    label = "Single Measurement",
+    xlabel = "Mean Photon Count Rate (GHz)",
+    ylabel = "Signal-to-Noise",
+    title = "S/N vs Mean Photon Count Rate ($(paramDict[:repeat][1]) trials)"
+    )
+plot!(pcol,sumFFTsn,label = "Sum of FT")
+plot!(pcol,FFTsumsn,label = "FT of Sum")
+```
+
+```julia; echo = false;
+tcol = select(ptable,:elapsed)
+plot(pcol,tcol,
+    xaxis = :log,
+    leg = false,
+    ylabel = "Time Elapsed (seconds)",
+    xlabel = "Mean Photon Count Rate (GHz)",
+    title = "Simulation Time vs Mean Photon Count Rate"
+    )
+```
+
+# Resolution
+
+```julia; echo = false; 
+include("templates/vary_res.jl")
+nameTable = paramTable(paramDict,nameDict)
+runTable = Speckles.run(paramDict);
+```
+## Parameters
+
+`j println(nameTable)`
+
+## Plots
+```julia; echo = false;
+# sort by resolution
+ptable = sort(runTable,:resolution)
+pcol = select(ptable,:resolution)
+singlecol = nothing
+sumFFTcol = nothing
+FFTsumCol = nothing
+for name in colnames(ptable)
+    if occursin("single", string(name))
+        global singlecol = name
+    end
+    if occursin("sumFFT", string(name))
+        global sumFFTcol = name
+    end
+    if occursin("FFTsum", string(name))
+        global FFTsumCol = name
+    end
+end
+@assert singlecol !== nothing "Single SN column does not exist"
+singlesn = select(ptable,singlecol)
+sumFFTsn = select(ptable,sumFFTcol)
+FFTsumsn = select(ptable,FFTsumCol)
+plot(pcol,singlesn,
+    label = "Single Measurement",
+    xlabel = "Resolution (ns)",
+    ylabel = "Signal-to-Noise",
+    title = "S/N vs Resolution ($(paramDict[:repeat][1]) trials)"
+    )
+plot!(pcol,sumFFTsn,label = "Sum of FT")
+plot!(pcol,FFTsumsn,label = "FT of Sum")
+```
+
+```julia; echo = false;
+tcol = select(ptable,:elapsed)
+plot(pcol,tcol,
+    leg = false,
+    xlabel = "Resolution (ns)",
+    ylabel = "Time Elapsed (seconds)",
+    title = "Simulation Time vs Resolution"
+    )
+```
+
+# Measurement Duration
+Note: correlation integration time is set to 1/2 the measurement duration for all cases.
+
+```julia; echo = false; 
+include("templates/vary_duration.jl")
+nameTable = paramTable(paramDict,nameDict)
+runTable = Speckles.run(paramDict);
+```
+## Parameters
+
+`j println(nameTable)`
+
+## Plots
+```julia; echo = false;
+# sort by resolution
+ptable = sort(runTable,:duration)
+pcol = select(ptable,:duration)
+singlecol = nothing
+sumFFTcol = nothing
+FFTsumCol = nothing
+for name in colnames(ptable)
+    if occursin("single", string(name))
+        global singlecol = name
+    end
+    if occursin("sumFFT", string(name))
+        global sumFFTcol = name
+    end
+    if occursin("FFTsum", string(name))
+        global FFTsumCol = name
+    end
+end
+@assert singlecol !== nothing "Single SN column does not exist"
+singlesn = select(ptable,singlecol)
+sumFFTsn = select(ptable,sumFFTcol)
+FFTsumsn = select(ptable,FFTsumCol)
+plot(pcol,singlesn,
+    label = "Single Measurement",
+    xlabel = "Measurement Duration (ns)",
+    ylabel = "Signal-to-Noise",
+    title = "S/N vs Measurement Duration ($(paramDict[:repeat][1]) trials)"
+    )
+plot!(pcol,sumFFTsn,label = "Sum of FT")
+plot!(pcol,FFTsumsn,label = "FT of Sum")
+```
+
+```julia; echo = false;
+tcol = select(ptable,:elapsed)
+plot(pcol,tcol,
+    leg = false,
+    xlabel = "Measurement Duration (ns)",
+    ylabel = "Time Elapsed (seconds)",
+    title = "Simulation Time vs Measurement Duration"
+    )
+```
+
+# Repeated Measurements 
+
+```julia; echo = false; 
+include("templates/vary_repeats.jl")
+nameTable = paramTable(paramDict,nameDict)
+runTable = Speckles.run(paramDict);
+```
+## Parameters
+
+`j println(nameTable)`
+
+## Plots
+```julia; echo = false;
+# sort by repeats
+ptable = sort(runTable,:repeat)
+pcol = select(ptable,:repeat)
+singlecol = nothing
+sumFFTcol = nothing
+FFTsumCol = nothing
+for name in colnames(ptable)
+    if occursin("single", string(name))
+        global singlecol = name
+    end
+    if occursin("sumFFT", string(name))
+        global sumFFTcol = name
+    end
+    if occursin("FFTsum", string(name))
+        global FFTsumCol = name
+    end
+end
+@assert singlecol !== nothing "Single SN column does not exist"
+singlesn = select(ptable,singlecol)
+sumFFTsn = select(ptable,sumFFTcol)
+FFTsumsn = select(ptable,FFTsumCol)
+plot(pcol,singlesn,
+    label = "Single Measurement",
+    xlabel = "Repeats",
+    ylabel = "Signal-to-Noise",
+    title = "S/N vs Repeats"
+    )
+plot!(pcol,sumFFTsn,label = "Sum of FT")
+plot!(pcol,FFTsumsn,label = "FT of Sum")
+```
+
+```julia; echo = false;
+tcol = select(ptable,:elapsed)
+plot(pcol,tcol,
+    leg = false,
+    xlabel = "Repeats",
+    ylabel = "Time Elapsed (seconds)",
+    title = "Simulation Time vs Repeats"
+    )
 ```
 

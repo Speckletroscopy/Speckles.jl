@@ -84,7 +84,6 @@ end
 function γCorrTimePlot(sim::SpeckleSim; ind::Union{String,Int} = "avg")
     if ind isa Int
         @assert 0 < ind < length(sim) "Index out of bounds"
-        return γCorrTimePlot(sim.corr[ind].data,sim.params)
     elseif ind == "avg"
         cavg = +(sim.corr...)
         return γCorrTimePlot(cavg.data/length(sim.corr),sim.params)

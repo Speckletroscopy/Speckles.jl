@@ -22,6 +22,7 @@ using CatViews
 
 # location where all results are stored
 results_directory = "results"
+simdb = nothing
 
 include("LightSource.jl")
 include("Detector.jl")
@@ -33,9 +34,8 @@ include("Strings.jl")
 include("Plots.jl")
 include("FileSave.jl")
 
-simdb = nothing
 #-------------------------------------------------------------------------------
-function load_db(;results_dir::String = results_directory)
+function load_simdb(;results_dir::String = results_directory)
     # use the default name for the results directory if none is given
     if results_dir != results_directory
         resultsDir(results_dir)
@@ -52,7 +52,7 @@ function load_db(;results_dir::String = results_directory)
     end
     return dbpath
 end
-export load_db
+export load_simdb
 #-------------------------------------------------------------------------------
 """
     function run(instance::SpeckleInstance)
@@ -126,7 +126,7 @@ Run a series of simulations and store them to results_dir.
     values are lists with each simulation parameter to be run
 """
 function run(allparams::Dict; results_dir::String = results_directory)
-    dbpath = load_db(results_dir = results_dir)
+    dbpath = load_simdb(results_dir = results_dir)
     # split up allparams into a vector of SpeckleParams
     paramVec = SpeckleParamsVector(allparams)
 
@@ -137,11 +137,11 @@ function run(allparams::Dict; results_dir::String = results_directory)
     simTbl = tabulate(simVec)
 
     # create and add an id for the whole run series
-    runid = uuid4()
+    seriesid = uuid4()
 
     # add a column with the id to the table
-    runidvec = fill(runid,length(simTbl))
-    simTbl = insertcolsbefore(simTbl,:id,:runid=>runidvec)
+    runidvec = fill(seriesid,length(simTbl))
+    simTbl = insertcolsbefore(simTbl,:id,:seriesid=>runidvec)
 
     # *** ANALYSIS *** #
     # take fourier transform of correlations
@@ -211,11 +211,42 @@ export run
 
 Returns the summary database of all stored simulations
 """
-function get_simdb()
+function get_simdb(;results_dir::String = results_directory)
+    # check if the simulation database has been loaded
     if simdb === nothing
-        return table()
+        load_simdb(results_dir)
+        # if the simulation database file does not exist, return an empty table
+        if simdb === nothing
+            return table()
+        end
     end
-    return JuliaDB.load(simdb)
+    return simdb
 end
+
+"""
+    getLastSimSeries()
+
+Returns a table of the last series of simulations (i.e. one 
+"""
+function getLastSimSeries()
+    # find most recent date/time
+    
+    # get the sim series id for that date/time
+    # filter table for all rows with that id
+    # return the table
+
+end
+
+# """
+    # plotLastSN()
+
+# Plots the signal to noise measurements from the last series of simulation runs.
+# """
+# function plotLastSN(xcol::Symbol,sncol::Symbol)
+
+    # # get table for the most recent sim series
+    # # 
+
+# end
 #-------------------------------------------------------------------------------
 end

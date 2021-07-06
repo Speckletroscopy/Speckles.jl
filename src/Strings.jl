@@ -33,16 +33,16 @@ export makeName
 Returns a markdown table with given parameters
 """
 function paramTable(params::Dict,names::Dict = Dict())
-    out = "| Name | Value |\n|:---:|:---:|\n"
-    for (key,value) in params
-        paramName = string(key)
-        if key in keys(names)
-            paramName = string(names[key])
+    out = "| Description | Value(s) |\n|:---:|:---:|\n"
+    for (key,value) in names
+        @assert key in keys(params) "Key $key not found in parameters"
+        pval = params[key]
+        if length(pval) == 1
+            pval = pval[1]
         end
-        out = string(out,"|$paramName|$value|\n")
+        out = string(out,"|$value|$pval|\n")
     end
     return out
-
 end
 
 export paramTable

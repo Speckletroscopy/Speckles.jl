@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.141592653-2.6-0.999993 (TeX Live 2021) (preloaded format=xelatex 2021.4.5)  2 JUL 2021 11:36
+This is XeTeX, Version 3.141592653-2.6-0.999993 (TeX Live 2021) (preloaded format=xelatex 2021.4.5)  6 JUL 2021 11:22
 entering extended mode
  \write18 enabled.
  %&-line parsing enabled.
@@ -493,16 +493,8 @@ LaTeX Info: Redefining \nameref on input line 120.
 \openout3 = `simnb.out'.
 
 \c@lstlisting=\count294
-LaTeX Font Info:    Font shape `TU/lmtt/bx/n' in size <14.4> not available
-(Font)              Font shape `TU/lmtt/b/n' tried instead on input line 125.
-Package microtype Info: Loading generic protrusion settings for font family
-(microtype)             `lmtt' (encoding: TU).
-(microtype)             For optimal results, create family-specific settings.
-(microtype)             See the microtype manual for details.
-LaTeX Font Info:    Font shape `TU/lmtt/bx/n' in size <10> not available
-(Font)              Font shape `TU/lmtt/b/n' tried instead on input line 128.
 LaTeX Font Info:    Trying to load font information for OT1+lmr on input line 1
-39.
+31.
 
 (/usr/local/texlive/2021/texmf-dist/tex/latex/lm/ot1lmr.fd
 File: ot1lmr.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
@@ -512,30 +504,30 @@ Package microtype Info: Loading generic protrusion settings for font family
 (microtype)             For optimal results, create family-specific settings.
 (microtype)             See the microtype manual for details.
 LaTeX Font Info:    Trying to load font information for OML+lmm on input line 1
-39.
+31.
 
 (/usr/local/texlive/2021/texmf-dist/tex/latex/lm/omllmm.fd
 File: omllmm.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 )
 LaTeX Font Info:    Trying to load font information for OMS+lmsy on input line 
-139.
+131.
 
 (/usr/local/texlive/2021/texmf-dist/tex/latex/lm/omslmsy.fd
 File: omslmsy.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 )
 LaTeX Font Info:    Trying to load font information for OMX+lmex on input line 
-139.
+131.
 
 (/usr/local/texlive/2021/texmf-dist/tex/latex/lm/omxlmex.fd
 File: omxlmex.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 )
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <10> on input line 139.
+(Font)              <12> on input line 131.
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <7> on input line 139.
+(Font)              <8> on input line 131.
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <5> on input line 139.
-LaTeX Font Info:    Trying to load font information for U+msa on input line 139
+(Font)              <6> on input line 131.
+LaTeX Font Info:    Trying to load font information for U+msa on input line 131
 .
 
 (/usr/local/texlive/2021/texmf-dist/tex/latex/amsfonts/umsa.fd
@@ -544,7 +536,7 @@ File: umsa.fd 2013/01/14 v3.01 AMS symbols A
 (/usr/local/texlive/2021/texmf-dist/tex/latex/microtype/mt-msa.cfg
 File: mt-msa.cfg 2006/02/04 v1.1 microtype config. file: AMS symbols (a) (RS)
 )
-LaTeX Font Info:    Trying to load font information for U+msb on input line 139
+LaTeX Font Info:    Trying to load font information for U+msb on input line 131
 .
 
 (/usr/local/texlive/2021/texmf-dist/tex/latex/amsfonts/umsb.fd
@@ -552,20 +544,25 @@ File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 )
 (/usr/local/texlive/2021/texmf-dist/tex/latex/microtype/mt-msb.cfg
 File: mt-msb.cfg 2005/06/01 v1.0 microtype config. file: AMS symbols (b) (RS)
-) [1
+)
+File: jl_6YzOV3/simnb_3_1.pdf Graphic file (type pdf)
+<use jl_6YzOV3/simnb_3_1.pdf>
+File: jl_6YzOV3/simnb_4_1.pdf Graphic file (type pdf)
+<use jl_6YzOV3/simnb_4_1.pdf>
+ [1
 
 ]
 [2] (./simnb.aux)
 Package rerunfilecheck Info: File `simnb.out' has not changed.
-(rerunfilecheck)             Checksum: 04D629B5F4BE8E3CCDD1010EE74FF2B4;1047.
+(rerunfilecheck)             Checksum: 253FED860DEAA7816D41A8840C493A31;329.
  ) 
 Here is how much of TeX's memory you used:
- 12450 strings out of 476919
- 187850 string characters out of 5821841
- 768302 words of memory out of 5000000
- 32238 multiletter control sequences out of 15000+600000
- 426914 words of font info for 63 fonts, out of 8000000 for 9000
+ 12392 strings out of 476919
+ 186272 string characters out of 5821841
+ 526835 words of memory out of 5000000
+ 32192 multiletter control sequences out of 15000+600000
+ 426876 words of font info for 56 fonts, out of 8000000 for 9000
  1348 hyphenation exceptions out of 8191
- 71i,5n,77p,439b,954s stack positions out of 5000i,500n,10000p,200000b,80000s
+ 71i,6n,77p,438b,331s stack positions out of 5000i,500n,10000p,200000b,80000s
 
 Output written on simnb.pdf (2 pages).
